@@ -297,6 +297,71 @@ def test_rules_brain_locale_context_uses_strict_primary_language_rule():
         assert rule_id in output["rules_context"]
 
 
+def test_rules_brain_emits_visual_localization_context():
+    namespace = load_code_node("code_nodes/rules_brain_pdp_trust_v1.py")
+    structured = json.loads((ROOT / "rules/pdp_trust_rules_structured_v1.json").read_text())
+
+    output = namespace["build_output"](
+        {
+            "rules_json": structured,
+            "product_id": "locale-fr",
+            "product_name": "English only dress",
+            "first_category_name": "Womenswear",
+            "target_country": "FR",
+            "target_currency": "EUR",
+            "product_main_images": ["https://example.com/main-1.jpeg", "https://example.com/main-2.jpeg"],
+            "size_chart_images": ["https://example.com/size-chart.jpeg"],
+            "image_manifest": "product_main_images_count=2; size_chart_images_count=1",
+            "product_attributes_text": "Material=Polyester; Washing instructions=Machine wash",
+            "localized_price_context": "target_country=FR; input_currency=USD; target_currency=EUR",
+        }
+    )
+
+    assert "visual_evidence_context" in output
+    assert "product_main_images_count=2" in output["visual_evidence_context"]
+    assert "size_chart_images_count=1" in output["visual_evidence_context"]
+    for expected in [
+        "strict_language_check=title",
+        "product_main_images",
+        "size_chart_images",
+        "product_desc",
+        "product_attributes_text",
+        "primary_language=French",
+    ]:
+        assert expected in output["locale_context"]
+    for rule_id in ["LOCALIZE-01", "LOCALIZE-02", "LOCALIZE-03"]:
+        assert rule_id in output["matched_rules"]
+
+
+def test_rules_brain_emits_new_product_context():
+    namespace = load_code_node("code_nodes/rules_brain_pdp_trust_v1.py")
+    structured = json.loads((ROOT / "rules/pdp_trust_rules_structured_v1.json").read_text())
+
+    output = namespace["build_output"](
+        {
+            "rules_json": structured,
+            "product_id": "new-product-rules",
+            "product_name": "New low sales item",
+            "first_category_name": "Home Supplies",
+            "target_country": "DE",
+            "is_new_product_30d": True,
+            "new_product_context": "is_new_product_30d=true; cl_pay_sub_order_cnt=9; new_product_low_sales=yes",
+            "cl_pay_sub_order_cnt": 9,
+            "shop_sales": 20000,
+            "shop_fans": 5000,
+            "shop_final_score": 4.7,
+        }
+    )
+
+    assert "new_product_context" in output
+    assert "new_product_low_sales=yes" in output["new_product_context"]
+    assert "shop_sales=20000" in output["new_product_context"]
+    assert "shop_fans=5000" in output["new_product_context"]
+    assert "shop_final_score=4.7" in output["new_product_context"]
+    for rule_id in ["NEW-01", "NEW-02"]:
+        assert rule_id in output["matched_rules"]
+
+
 def test_prompts_include_new_visual_attribute_and_new_product_inputs():
     system_text = (ROOT / "prompts/trust_evaluator_system_prompt_v1.txt").read_text()
     user_text = (ROOT / "prompts/trust_evaluator_user_prompt_v1.txt").read_text()
