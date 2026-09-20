@@ -297,6 +297,28 @@ def test_rules_brain_locale_context_uses_strict_primary_language_rule():
         assert rule_id in output["rules_context"]
 
 
+def test_rules_brain_price_context_prefers_local_landed_cost_for_eu4():
+    namespace = load_code_node("code_nodes/rules_brain_pdp_trust_v1.py")
+    structured = json.loads((ROOT / "rules/pdp_trust_rules_structured_v1.json").read_text())
+
+    output = namespace["build_output"](
+        {
+            "rules_json": structured,
+            "target_country": "DE",
+            "currency": "USD",
+            "target_currency": "EUR",
+            "sales_price": "100",
+            "shipping_fee": "10",
+            "landed_cost_local": "95.10",
+            "localized_price_context": "landed_cost=110.00 USD -> 95.10 EUR",
+            "price_input_semantics": "EU4 sales_price and shipping_fee are USD; converted to EUR",
+        }
+    )
+
+    assert "landed_cost_local=95.10 EUR" in output["price_context"]
+    assert "landed_cost = product price + shipping = 110.0 USD" not in output["price_context"]
+
+
 def test_rules_brain_emits_visual_localization_context():
     namespace = load_code_node("code_nodes/rules_brain_pdp_trust_v1.py")
     structured = json.loads((ROOT / "rules/pdp_trust_rules_structured_v1.json").read_text())
@@ -996,7 +1018,7 @@ def test_context_builder_code_node_builds_single_llm_status_fields():
     assert "matched_rules=BOUNDARY-01,BOUNDARY-08" in output["evidence_manifest"]
     assert "Visible image/text consistency" in output["decision_checklist"]
     assert "Score 5 gate" in output["decision_checklist"]
-    assert "context_builder_version=2026-08-17-v1" in output["context_builder_debug"]
+    assert "context_builder_version=2026-09-20-vnext" in output["context_builder_debug"]
 
 
 def test_context_builder_propagates_new_visual_and_new_product_context():
@@ -1064,6 +1086,26 @@ def test_context_builder_falls_back_to_separated_images_when_images_is_empty():
     assert "product_main_images_count=2" in combined
     assert "size_chart_images_count=1" in combined
     assert "no image URLs reached the LLM" not in combined
+
+
+def test_context_builder_case_state_prefers_local_landed_cost_for_eu4():
+    namespace = load_code_node("code_nodes/context_builder_pdp_trust_v1.py")
+
+    output = namespace["build_output"](
+        {
+            "target_country": "DE",
+            "currency": "USD",
+            "target_currency": "EUR",
+            "sales_price": "100",
+            "shipping_fee": "10",
+            "landed_cost_local": "95.10",
+            "localized_price_context": "landed_cost=110.00 USD -> 95.10 EUR",
+        }
+    )
+
+    assert "landed_cost_local=95.10 EUR" in output["case_state"]
+    assert "landed_cost=110.0" not in output["case_state"]
+    assert "landed_cost = product price + shipping = 110.0 USD" not in output["case_state"]
 
 
 def test_final_data_cleaning_accepts_loop_ecom_output_url_array():
