@@ -93,6 +93,41 @@ def minimal_fallback_rules():
                 "applies_to": ["all"],
             },
             {
+                "id": "LOCALIZE-01",
+                "name": "Strict target-country language cap",
+                "category": "localization",
+                "text": "Strict target-country language cap: title, product_main_images, size_chart_images, product_desc, and product_attributes_text must make core PDP info available in the target-country primary language or with equivalent target-language translation. Core PDP info in non-target primary language without target-language translation means page_quality <= 3. Non-target text is tolerated only for brand names, model names, international measurement units, and non-critical decorative text.",
+                "applies_to": ["all", "target_country", "title", "product_main_images", "size_chart_images", "product_desc", "page_quality", "product_attributes_text", "image_manifest"],
+            },
+            {
+                "id": "LOCALIZE-02",
+                "name": "Long-image description localization",
+                "category": "localization",
+                "text": "Long-image description localization: product_main_images and long-image descriptions are PDP evidence when legible. If product_desc is empty because long-image descriptions carry the actual product specs, use those visual descriptions instead of treating the page as empty. Non-localized long-image core purchase text without equivalent target-language translation means page_quality <= 3.",
+                "applies_to": ["all", "product_main_images", "long_images", "product_desc", "visual_evidence_context"],
+            },
+            {
+                "id": "LOCALIZE-03",
+                "name": "Size chart localization",
+                "category": "localization",
+                "text": "Size chart localization: when size_chart_images are present, check whether size labels, body measurements, units, fit guidance, age/height/weight ranges, and SKU mapping are understandable in the target-country primary language or have equivalent target-language translation. Non-localized size_chart_images that block size selection mean page_quality <= 3.",
+                "applies_to": ["all", "size_chart_images", "page_quality"],
+            },
+            {
+                "id": "NEW-01",
+                "name": "New-product review and quality reliability",
+                "category": "review_logic",
+                "text": "Use is_new_product_30d and new_product_context to calibrate sparse evidence. If is_new_product_30d=true and cl_pay_sub_order_cnt < 10, do not mechanically lower quality because product sales/reviews are sparse; reduce product review history weight and use shop_sales/shop_fans/shop_final_score/page/attributes/images more heavily. New-product tolerance does not override safety, compliance, Stage 1 red flags, IPR/authorization risk, misleading/wrong-item evidence, visible product/spec conflict, or negative review_contents. Score 3 is not a harmless neutral value; it means cautious but buyable and must be justified by enough visible trust evidence.",
+                "applies_to": ["all", "is_new_product_30d", "new_product_context", "quality", "reviews"],
+            },
+            {
+                "id": "NEW-02",
+                "name": "Traffic-tier social proof reminder",
+                "category": "review_logic",
+                "text": "Use shop_sales/shop_fans/shop_final_score/page/attributes/images plus cl_pay_sub_order_cnt as traffic-tier context, not hidden backend proof of product quality. For is_new_product_30d=true and cl_pay_sub_order_cnt < 10, reduce product review history weight rather than mechanically lowering quality because product sales/reviews are sparse. High shop traffic or shop_final_score can reduce uncertainty only when PDP evidence and review_contents are consistent.",
+                "applies_to": ["all", "shop_sales", "shop_fans", "shop_final_score", "cl_pay_sub_order_cnt", "new_product_context"],
+            },
+            {
                 "id": "STAGE1-05",
                 "category": "red_flag",
                 "text": "Do not downscore ordinary fan-style/IP decoration automatically. International big brands and strong genuine-market brands are stricter: clear logo-like, monogram, packaging, bottle, shoe, bag, classic colorway, naming structure, or trade dress imitation can support score 2 even without explicit brand words.",
@@ -252,6 +287,42 @@ def parse_int(text):
     return int(number)
 
 
+def parse_bool_flag(text):
+    if isinstance(text, bool):
+        return text
+    value = str(text or "").strip().lower()
+    if value in ("1", "1.0", "true", "yes", "y"):
+        return True
+    if value in ("0", "0.0", "false", "no", "n"):
+        return False
+    return None
+
+
+def count_context_items(value):
+    value = unwrap_body(value)
+    if value is None:
+        return 0
+    if isinstance(value, list):
+        return len([item for item in value if str(item or "").strip()])
+    if isinstance(value, dict):
+        return len(value)
+    text = str(value).strip()
+    if not text:
+        return 0
+    try:
+        parsed = json.loads(text)
+    except Exception:
+        parsed = None
+    if isinstance(parsed, list):
+        return len([item for item in parsed if str(item or "").strip()])
+    if isinstance(parsed, dict):
+        return len(parsed)
+    urls = re.findall(r"https?://[^\s,;|]+", text)
+    if urls:
+        return len(urls)
+    return 1
+
+
 def parse_rules_json(raw_rules):
     raw_rules = unwrap_body(raw_rules)
     if isinstance(raw_rules, dict):
@@ -288,6 +359,7 @@ def collect_pdp(params):
     return {
         "product_id": text_param(params, "product_id", "Product_id", "item_id"),
         "title": text_param(params, "product_name", "title", "product_title", "Product_title"),
+        "product_desc": text_param(params, "product_desc", "description", "product_description", "desc"),
         "description": text_param(params, "product_desc", "description", "product_description", "desc"),
         "category": text_param(params, "first_category_name", "product_category", "category", "Product_category"),
         "brand_name": text_param(params, "brand_name", "brand", "Product_brand"),
@@ -308,6 +380,16 @@ def collect_pdp(params):
         "landed_cost_local": text_param(params, "landed_cost_local"),
         "localized_price_context": text_param(params, "localized_price_context"),
         "landed_cost": "" if landed is None else str(round(landed, 2)),
+        "product_main_images": text_param(params, "product_main_images"),
+        "size_chart_images": text_param(params, "size_chart_images"),
+        "image_manifest": text_param(params, "image_manifest"),
+        "product_attributes_text": text_param(params, "product_attributes_text"),
+        "is_new_product_30d": text_param(params, "is_new_product_30d"),
+        "new_product_context": text_param(params, "new_product_context"),
+        "shop_sales": text_param(params, "shop_sales"),
+        "shop_fans": text_param(params, "shop_fans"),
+        "shop_final_score": text_param(params, "shop_final_score"),
+        "cl_pay_sub_order_cnt": text_param(params, "cl_pay_sub_order_cnt"),
         "rating": text_param(params, "avg_review_star_td", "rating", "product_rating", "review_rating"),
         "avg_star_rating": text_param(params, "avg_star_rating"),
         "recent_review_contents": text_param(params, "review_contents", "recent_review_contents", "raw_review_contents"),
@@ -975,18 +1057,68 @@ def build_locale_context(rules, pdp):
             f"target_country={target_country}",
             f"buyer_persona={profile.get('buyer_persona', '')}",
             f"primary_language={profile.get('primary_language', '')}",
+            "strict_language_check=title, product_main_images, size_chart_images, product_desc, product_attributes_text",
             f"tolerated_languages={tolerated}",
             f"target_currency={profile.get('target_currency', pdp.get('target_currency', ''))}",
             f"exchange_rate_source={exchange.get('source', 'Frankfurter API')}",
             f"exchange_rate_date={exchange.get('date', pdp.get('exchange_rate_date', ''))}",
             f"exchange_rate_to_target_currency={pdp.get('exchange_rate_to_target_currency', '')}",
             f"localized_price_context={localized_price}",
+            f"product_main_images={pdp.get('product_main_images', '')}",
+            f"size_chart_images={pdp.get('size_chart_images', '')}",
+            f"product_desc={pdp.get('product_desc') or pdp.get('description', '')}",
+            f"product_attributes_text={pdp.get('product_attributes_text', '')}",
             f"strict_language_rule={profile.get('strict_language_rule', '')}",
             f"language_tolerance={profile.get('language_tolerance', '')}",
             f"value_judgment={profile.get('value_judgment', '')}",
             "target-country strict language rule: core PDP info in non-target primary language without target-language translation means page_quality <= 3; only brand names, model names, international measurement units, and non-critical decorative text may remain outside the primary language without penalty.",
         ]
     )
+
+
+def build_visual_evidence_context(pdp):
+    product_main_images_count = count_context_items(pdp.get("product_main_images"))
+    size_chart_images_count = count_context_items(pdp.get("size_chart_images"))
+    return "\n".join(
+        [
+            "VISUAL_EVIDENCE_CONTEXT",
+            f"product_main_images_count={product_main_images_count}",
+            f"size_chart_images_count={size_chart_images_count}",
+            f"image_manifest={pdp.get('image_manifest', '')}",
+            "product_main_images may include ordinary main images and long detail images; inspect both for product identity, specs, claims, and visible localization evidence.",
+            "size_chart_images are size evidence and localization-language evidence; use them for fit/measurement confidence and strict target-country primary-language checks.",
+        ]
+    )
+
+
+def build_new_product_context(pdp):
+    existing_context = pdp.get("new_product_context", "")
+    is_new_product_30d = parse_bool_flag(pdp.get("is_new_product_30d")) is True
+    cl_pay_sub_order_cnt = parse_float(pdp.get("cl_pay_sub_order_cnt"))
+    existing_lower = existing_context.lower()
+    existing_low_sales = "new_product_low_sales=yes" in existing_lower
+    confirmed_new_low_sales = existing_low_sales or (is_new_product_30d and cl_pay_sub_order_cnt is not None and cl_pay_sub_order_cnt < 10)
+    lines = ["NEW_PRODUCT_CONTEXT"]
+    if existing_context:
+        lines.append(existing_context)
+    if pdp.get("is_new_product_30d") and "is_new_product_30d=" not in existing_context:
+        lines.append(f"is_new_product_30d={'true' if is_new_product_30d else 'false'}")
+    if pdp.get("cl_pay_sub_order_cnt") and "cl_pay_sub_order_cnt=" not in existing_context:
+        lines.append(f"cl_pay_sub_order_cnt={pdp.get('cl_pay_sub_order_cnt')}")
+    if pdp.get("is_new_product_30d") and pdp.get("cl_pay_sub_order_cnt") and "new_product_low_sales=" not in existing_context:
+        lines.append(f"new_product_low_sales={'yes' if confirmed_new_low_sales else 'no'}")
+    for key in ("shop_sales", "shop_fans", "shop_final_score"):
+        if pdp.get(key):
+            lines.append(f"{key}={pdp.get(key)}")
+    if confirmed_new_low_sales:
+        lines.append(
+            "quality_weighting=confirmed 30-day new product with sales < 10: reduce product review history weight; use shop_sales/shop_fans/shop_final_score plus page, attributes, product_main_images, size_chart_images, safety, compliance, price context, and review_contents instead of mechanically lowering quality for sparse product history."
+        )
+    else:
+        lines.append(
+            "quality_weighting=use new-product tolerance only when is_new_product_30d is confirmed and product sales are < 10; otherwise use normal review and quality weighting."
+        )
+    return "\n".join(lines)
 
 
 def infer_risk_hints(pdp, tags):
@@ -1169,6 +1301,8 @@ def build_output(params):
     tags = infer_tags(rules, pdp)
     selected_rules = select_rules(rules, pdp, tags)
     locale_context = build_locale_context(rules, pdp)
+    visual_evidence_context = build_visual_evidence_context(pdp)
+    new_product_context = build_new_product_context(pdp)
     review_warning = infer_review_warning(pdp)
     price_warning = infer_price_warning(pdp, tags)
     risk_hints = infer_risk_hints(pdp, tags)
@@ -1177,6 +1311,8 @@ def build_output(params):
         "rules_context": build_rules_context(rules, pdp, selected_rules, tags, warning),
         "matched_rules": build_matched_rules(selected_rules),
         "locale_context": locale_context,
+        "visual_evidence_context": visual_evidence_context,
+        "new_product_context": new_product_context,
         "risk_hints": risk_hints,
         "evidence_gaps": evidence_gaps,
         "review_context": review_warning,

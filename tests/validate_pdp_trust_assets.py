@@ -362,6 +362,46 @@ def test_rules_brain_emits_new_product_context():
         assert rule_id in output["matched_rules"]
 
 
+def test_rules_brain_fallback_rules_include_merged_localization_and_new_product_rules():
+    namespace = load_code_node("code_nodes/rules_brain_pdp_trust_v1.py")
+
+    output = namespace["build_output"](
+        {
+            "rules_json": "{invalid json",
+            "product_id": "fallback-rules",
+            "product_name": "Fallback rules case",
+            "target_country": "DE",
+            "new_product_context": "is_new_product_30d=true; cl_pay_sub_order_cnt=9; new_product_low_sales=yes",
+        }
+    )
+
+    for rule_id in ["LOCALIZE-01", "LOCALIZE-02", "LOCALIZE-03", "NEW-01", "NEW-02"]:
+        assert rule_id in output["matched_rules"]
+        assert rule_id in output["rules_context"]
+    assert "core PDP info in non-target primary language without target-language translation means page_quality <= 3" in output["rules_context"]
+
+
+def test_rules_brain_new_product_context_honors_existing_low_sales_flag():
+    namespace = load_code_node("code_nodes/rules_brain_pdp_trust_v1.py")
+    structured = json.loads((ROOT / "rules/pdp_trust_rules_structured_v1.json").read_text())
+
+    output = namespace["build_output"](
+        {
+            "rules_json": structured,
+            "product_id": "existing-low-sales-context",
+            "product_name": "Existing low sales context case",
+            "target_country": "DE",
+            "new_product_context": "is_new_product_30d=true; cl_pay_sub_order_cnt=9; new_product_low_sales=yes",
+            "shop_sales": 20000,
+            "shop_fans": 5000,
+            "shop_final_score": 4.7,
+        }
+    )
+
+    assert "new_product_low_sales=yes" in output["new_product_context"]
+    assert "quality_weighting=confirmed 30-day new product with sales < 10" in output["new_product_context"]
+
+
 def test_prompts_include_new_visual_attribute_and_new_product_inputs():
     system_text = (ROOT / "prompts/trust_evaluator_system_prompt_v1.txt").read_text()
     user_text = (ROOT / "prompts/trust_evaluator_user_prompt_v1.txt").read_text()
