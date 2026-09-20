@@ -91,6 +91,11 @@ ALLOWED_B_END_REASONS = [
     "特殊商品关键信息披露不足",
 ]
 
+SUPPORTED_TARGET_COUNTRIES = {"UK", "DE", "FR", "ES", "IT"}
+EXPECTED_TARGET_CURRENCIES = {"UK": "GBP", "DE": "EUR", "FR": "EUR", "ES": "EUR", "IT": "EUR"}
+USD_TO_EUR = "0.86453"
+EXCHANGE_RATE_DATE = "2026-08-14"
+
 
 def load_code_node(rel_path):
     code_path = ROOT / rel_path
@@ -407,6 +412,79 @@ def test_final_data_cleaning_preserves_all_product_main_images():
     assert output["images"] == ["https://example.com/main-1.jpeg", "https://example.com/main-2.jpeg"]
     assert "product_main_images_count=3" in output["image_manifest"]
     assert "first image only" not in output["final_data_cleaning_debug"].lower()
+
+
+def test_final_data_cleaning_uses_native_gbp_for_uk_prices():
+    namespace = load_code_node("code_nodes/final_data_cleaning_pdp_trust_v1.py")
+    output = namespace["build_output"](
+        {
+            "target_country": "UK",
+            "sales_price": "100",
+            "shipping_fee": "10",
+            "list_price_usd": "150",
+        }
+    )
+
+    assert output["currency"] == EXPECTED_TARGET_CURRENCIES["UK"]
+    assert output["target_currency"] == EXPECTED_TARGET_CURRENCIES["UK"]
+    assert output["price_input_semantics"] == "UK sales_price and shipping_fee are native GBP; no conversion applied"
+    assert output["sales_price_local"] == "100.00"
+    assert output["shipping_fee_local"] == "10.00"
+    assert output["landed_cost_local"] == "110.00"
+    assert "no conversion applied" in output["localized_price_context"]
+    assert "list_price_usd=150.00 USD anchor only" in output["localized_price_context"]
+    assert " -> " not in output["localized_price_context"]
+    assert "exchange_rate" not in output["localized_price_context"]
+
+
+def test_final_data_cleaning_converts_eu4_usd_prices_to_eur():
+    namespace = load_code_node("code_nodes/final_data_cleaning_pdp_trust_v1.py")
+    for target_country in sorted(SUPPORTED_TARGET_COUNTRIES - {"UK"}):
+        output = namespace["build_output"](
+            {
+                "target_country": target_country,
+                "sales_price": "100",
+                "shipping_fee": "10",
+                "list_price_usd": "150",
+            }
+        )
+
+        assert output["currency"] == "USD"
+        assert output["target_currency"] == EXPECTED_TARGET_CURRENCIES[target_country]
+        assert output["exchange_rate_to_target_currency"] == USD_TO_EUR
+        assert output["exchange_rate_date"] == EXCHANGE_RATE_DATE
+        assert output["price_input_semantics"] == "EU4 sales_price and shipping_fee are USD; converted to EUR"
+        assert output["sales_price_local"] == "86.45"
+        assert output["shipping_fee_local"] == "8.65"
+        assert output["landed_cost_local"] == "95.10"
+        assert "100.00 USD -> 86.45 EUR" in output["localized_price_context"]
+        assert "110.00 USD -> 95.10 EUR" in output["localized_price_context"]
+
+
+def test_final_data_cleaning_normalizes_new_product_30d_flag():
+    namespace = load_code_node("code_nodes/final_data_cleaning_pdp_trust_v1.py")
+
+    new_low_sales = namespace["build_output"](
+        {
+            "target_country": "UK",
+            "is_new_product_30d": "1",
+            "cl_pay_sub_order_cnt": "9",
+        }
+    )
+    assert new_low_sales["is_new_product_30d"] is True
+    assert new_low_sales["new_product_context"] == (
+        "is_new_product_30d=true; cl_pay_sub_order_cnt=9; new_product_low_sales=yes"
+    )
+
+    established_or_unknown = namespace["build_output"](
+        {
+            "target_country": "UK",
+            "is_new_product_30d": "",
+            "cl_pay_sub_order_cnt": "0",
+        }
+    )
+    assert established_or_unknown["is_new_product_30d"] is False
+    assert "new_product_low_sales=no" in established_or_unknown["new_product_context"]
 
 
 def test_final_data_cleaning_parses_product_extra_attributes_rpc():
