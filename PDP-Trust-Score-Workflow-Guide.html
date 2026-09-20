@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PDP Trust Score EU4+UK Workflow Guide</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      color: #172026;
+      background: #f7f8fa;
+      line-height: 1.5;
+    }
+    main {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 32px 20px;
+    }
+    section {
+      margin: 0 0 24px;
+      padding: 0;
+    }
+    h1, h2 {
+      margin: 0 0 12px;
+      line-height: 1.2;
+    }
+    p {
+      margin: 0 0 12px;
+    }
+    code, pre {
+      font-family: Menlo, Consolas, monospace;
+      font-size: 13px;
+    }
+    pre {
+      overflow-x: auto;
+      background: #ffffff;
+      border: 1px solid #d9dee7;
+      border-radius: 6px;
+      padding: 14px;
+    }
+    ul {
+      padding-left: 20px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section>
+      <h1>PDP Trust Score EU4+UK Merged vNext</h1>
+      <p>Project: <code>pdp-trust-score_EU4-UK</code></p>
+      <p>Repository: <code>https://github.com/danielwanyan/pdp-trust-score_EU4-UK</code></p>
+      <p>The active workflow evaluates a single product per invocation and one product per workflow call. It has exactly one LLM and only one LLM: <code>Trust_Evaluator</code>.</p>
+    </section>
+
+    <section>
+      <h2>Active Flow</h2>
+      <pre>Start
+  -> product_image_rpc
+  -> product_extra_attributes_rpc
+  -> rules_text_fetch
+  -> rules_json_fetch
+  -> Final_data_cleaning
+  -> Rules_Brain
+  -> Context_Builder
+  -> Trust_Evaluator
+  -> End</pre>
+    </section>
+
+    <section>
+      <h2>Rule URLs</h2>
+      <pre>https://raw.githubusercontent.com/danielwanyan/pdp-trust-score_EU4-UK/main/rules/pdp_trust_rules_compressed_v1.txt
+https://raw.githubusercontent.com/danielwanyan/pdp-trust-score_EU4-UK/main/rules/pdp_trust_rules_structured_v1.json</pre>
+    </section>
+
+    <section>
+      <h2>Required Context</h2>
+      <ul>
+        <li>Use strict target-country language checks; missing core localization can cap <code>page_quality &lt;= 3</code>.</li>
+        <li>Map <code>ProductMeta.images</code> into <code>product_main_images</code>.</li>
+        <li>Map <code>product_extra_attributes.product_attributes</code> into <code>product_attributes_text</code>.</li>
+        <li>Map <code>product_extra_attributes.size_chart</code> into <code>size_chart_images</code>.</li>
+        <li>Preserve <code>image_manifest</code>, <code>visual_evidence_context</code>, <code>case_state</code>, <code>evidence_manifest</code>, and <code>decision_checklist</code>.</li>
+        <li>Follow <code>price_input_semantics</code>: UK GBP native inputs, EU4 USD-to-EUR conversion, and <code>list_price_usd</code> anchor only.</li>
+        <li>Use <code>is_new_product_30d</code> and <code>new_product_context</code> so score 3 deboost tier decisions are evidence-based.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

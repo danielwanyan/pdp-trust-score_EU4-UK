@@ -1538,6 +1538,28 @@ def test_wiring_uses_rpc_and_final_data_cleaning_only():
     assert text.count("body = rules_text_fetch.body") == 1
 
 
+def test_docs_describe_new_repo_and_aicolate_outputs():
+    overview = (ROOT / "docs/overview.md").read_text()
+    wiring = (ROOT / "docs/wiring-checklist.md").read_text()
+    combined = overview + "\n" + wiring
+    assert "pdp-trust-score_EU4-UK" in combined
+    assert "https://github.com/danielwanyan/pdp-trust-score_EU4-UK" in combined
+    for field in [
+        "product_main_images",
+        "size_chart_images",
+        "product_attributes_text",
+        "image_manifest",
+        "price_input_semantics",
+        "is_new_product_30d",
+        "new_product_context",
+        "visual_evidence_context",
+    ]:
+        assert field in combined
+    assert "Output Panel" in wiring
+    assert "rules_text_fetch" in wiring
+    assert "rules_json_fetch" in wiring
+
+
 def test_model_facing_text_uses_eu_uk_locale_not_us_locale():
     checked_files = [
         "rules/pdp_trust_rules_compressed_v1.txt",

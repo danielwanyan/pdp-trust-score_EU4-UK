@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="520" viewBox="0 0 1100 520" role="img" aria-labelledby="title desc">
+  <title id="title">PDP Trust Score EU4+UK Merged vNext Workflow</title>
+  <desc id="desc">The pdp-trust-score_EU4-UK active workflow evaluates a single product per invocation and one product per workflow call with exactly one LLM and only one LLM, Trust_Evaluator.</desc>
+  <rect width="1100" height="520" fill="#f7f8fa"/>
+  <text x="40" y="48" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#172026">pdp-trust-score_EU4-UK merged vNext</text>
+  <text x="40" y="76" font-family="Arial, sans-serif" font-size="15" fill="#374151">single product per invocation, one product per workflow call, exactly one LLM and only one LLM: Trust_Evaluator</text>
+  <text x="40" y="104" font-family="Arial, sans-serif" font-size="13" fill="#374151">Rules: https://raw.githubusercontent.com/danielwanyan/pdp-trust-score_EU4-UK/main/rules/pdp_trust_rules_compressed_v1.txt</text>
+  <text x="40" y="124" font-family="Arial, sans-serif" font-size="13" fill="#374151">Rules JSON: https://raw.githubusercontent.com/danielwanyan/pdp-trust-score_EU4-UK/main/rules/pdp_trust_rules_structured_v1.json</text>
+
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#56616f"/>
+    </marker>
+    <style>
+      .node { fill: #ffffff; stroke: #9aa7b5; stroke-width: 1.5; rx: 6; }
+      .llm { fill: #fff7ed; stroke: #c47a20; stroke-width: 1.8; rx: 6; }
+      .label { font-family: Arial, sans-serif; font-size: 15px; font-weight: 700; fill: #172026; }
+      .small { font-family: Arial, sans-serif; font-size: 12px; fill: #374151; }
+      .line { stroke: #56616f; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect class="node" x="40" y="180" width="120" height="64"/>
+  <text class="label" x="82" y="206">Start</text>
+  <text class="small" x="57" y="226">Excel row</text>
+
+  <rect class="node" x="210" y="150" width="170" height="72"/>
+  <text class="label" x="238" y="178">product_image_rpc</text>
+  <text class="small" x="236" y="200">ProductMeta.images</text>
+
+  <rect class="node" x="210" y="250" width="170" height="72"/>
+  <text class="label" x="223" y="278">product_extra_attributes_rpc</text>
+  <text class="small" x="232" y="300">attributes + size_chart</text>
+
+  <rect class="node" x="430" y="150" width="170" height="72"/>
+  <text class="label" x="448" y="178">rules_text_fetch</text>
+  <text class="small" x="467" y="200">compressed txt</text>
+
+  <rect class="node" x="430" y="250" width="170" height="72"/>
+  <text class="label" x="448" y="278">rules_json_fetch</text>
+  <text class="small" x="476" y="300">structured json</text>
+
+  <rect class="node" x="650" y="150" width="170" height="72"/>
+  <text class="label" x="678" y="178">Final_data_cleaning</text>
+  <text class="small" x="672" y="200">images, prices, fields</text>
+
+  <rect class="node" x="650" y="250" width="170" height="72"/>
+  <text class="label" x="693" y="278">Rules_Brain</text>
+  <text class="small" x="677" y="300">rules_context</text>
+
+  <rect class="node" x="650" y="350" width="170" height="72"/>
+  <text class="label" x="674" y="378">Context_Builder</text>
+  <text class="small" x="678" y="400">case manifests</text>
+
+  <rect class="llm" x="880" y="250" width="170" height="72"/>
+  <text class="label" x="915" y="278">Trust_Evaluator</text>
+  <text class="small" x="930" y="300">only LLM</text>
+
+  <line class="line" x1="160" y1="205" x2="210" y2="185"/>
+  <line class="line" x1="160" y1="219" x2="210" y2="285"/>
+  <line class="line" x1="380" y1="186" x2="430" y2="186"/>
+  <line class="line" x1="380" y1="286" x2="430" y2="286"/>
+  <line class="line" x1="600" y1="186" x2="650" y2="186"/>
+  <line class="line" x1="600" y1="286" x2="650" y2="286"/>
+  <line class="line" x1="820" y1="186" x2="880" y2="274"/>
+  <line class="line" x1="820" y1="286" x2="880" y2="286"/>
+  <line class="line" x1="820" y1="386" x2="880" y2="306"/>
+  <line class="line" x1="735" y1="222" x2="735" y2="250"/>
+  <line class="line" x1="735" y1="322" x2="735" y2="350"/>
+
+  <text class="small" x="40" y="462">Outputs include images: Array&lt;String&gt;, product_main_images, size_chart_images, product_attributes_text, image_manifest, case_state, evidence_manifest, decision_checklist.</text>
+  <text class="small" x="40" y="486">Rules include strict target-country language, page_quality &lt;= 3 caps, UK GBP native inputs, EU4 USD-to-EUR conversion, list_price_usd anchor only, and score 3 deboost tier handling.</text>
+</svg>
