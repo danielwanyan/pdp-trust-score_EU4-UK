@@ -999,6 +999,51 @@ def test_context_builder_code_node_builds_single_llm_status_fields():
     assert "context_builder_version=2026-08-17-v1" in output["context_builder_debug"]
 
 
+def test_context_builder_propagates_new_visual_and_new_product_context():
+    namespace = load_code_node("code_nodes/context_builder_pdp_trust_v1.py")
+    output = namespace["build_output"](
+        {
+            "product_id": "ctx-case",
+            "product_name": "Context Case",
+            "target_country": "IT",
+            "target_currency": "EUR",
+            "product_main_images": [
+                "https://example.com/main-1.jpeg",
+                "https://example.com/main-2.jpeg",
+            ],
+            "size_chart_images": ["https://example.com/size-chart.jpeg"],
+            "images": [
+                "https://example.com/main-1.jpeg",
+                "https://example.com/main-2.jpeg",
+                "https://example.com/size-chart.jpeg",
+            ],
+            "image_manifest": "product_main_images_count=2; size_chart_images_count=1",
+            "product_attributes_text": "Material=Cotton; Size=M",
+            "is_new_product_30d": True,
+            "new_product_context": "is_new_product_30d=true; cl_pay_sub_order_cnt=5; new_product_low_sales=yes",
+            "visual_evidence_context": "product_main_images_count=2; size_chart_images_count=1",
+            "locale_context": (
+                "target_country=IT; primary_language=Italian; "
+                "page_quality_cap_rule=page_quality <= 3"
+            ),
+        }
+    )
+
+    combined = "\n".join(str(value) for value in output.values())
+    for expected in [
+        "product_main_images_count=2",
+        "size_chart_images_count=1",
+        "Material=Cotton",
+        "new_product_low_sales=yes",
+        "primary_language=Italian",
+        "page_quality <= 3",
+        "strict primary-language rule",
+        "product_main_images",
+        "size_chart_images",
+    ]:
+        assert expected in combined
+
+
 def test_final_data_cleaning_accepts_loop_ecom_output_url_array():
     code_path = ROOT / "code_nodes/final_data_cleaning_pdp_trust_v1.py"
     namespace = {"Args": object, "Output": dict}
