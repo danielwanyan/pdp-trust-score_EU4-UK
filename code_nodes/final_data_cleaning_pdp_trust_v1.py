@@ -12,10 +12,7 @@ TARGET_CURRENCY_BY_COUNTRY = {
     "ES": "EUR",
     "IT": "EUR",
 }
-EXCHANGE_RATE_TO_TARGET_CURRENCY = {
-    "GBP": 0.73874,
-    "EUR": 0.86453,
-}
+USD_TO_EUR = 0.86453
 EXCHANGE_RATE_DATE = "2026-08-14"
 EXCHANGE_RATE_SOURCE = "Frankfurter API"
 
@@ -531,26 +528,63 @@ def build_localized_price_fields(params):
     if target_country not in SUPPORTED_TARGET_COUNTRIES:
         context = (
             f"unsupported target_country={target_country or 'missing'}; "
-            "supported values are UK, DE, FR, ES, IT; no local currency conversion applied"
+            "supported values are UK, DE, FR, ES, IT; no fallback to UK; no local currency conversion applied"
         )
         return {
+            "currency": "UNSUPPORTED",
             "target_country": target_country,
             "target_currency": "UNSUPPORTED",
             "exchange_rate_to_target_currency": "",
-            "exchange_rate_date": EXCHANGE_RATE_DATE,
+            "exchange_rate_date": "",
             "sales_price_local": "",
             "list_price_local": "",
             "shipping_fee_local": "",
-            "landed_cost_usd": format_money(landed_cost),
+            "landed_cost_usd": "",
             "landed_cost_local": "",
+            "price_input_semantics": (
+                f"unsupported target_country={target_country or 'missing'}; "
+                "cannot determine price input semantics; no fallback to UK"
+            ),
             "localized_price_context": context,
         }
 
     target_currency = TARGET_CURRENCY_BY_COUNTRY[target_country]
-    rate = EXCHANGE_RATE_TO_TARGET_CURRENCY[target_currency]
 
+    if target_country == "UK":
+        context_parts = [
+            "target_country=UK",
+            "input_currency=GBP",
+            "target_currency=GBP",
+            "no conversion applied",
+        ]
+        if sales_price is not None:
+            context_parts.append(f"sales_price={format_money(sales_price)} GBP")
+        if shipping_fee is not None:
+            context_parts.append(f"shipping_fee={format_money(shipping_fee)} GBP")
+        if landed_cost is not None:
+            context_parts.append(f"landed_cost={format_money(landed_cost)} GBP")
+        if list_price is not None:
+            context_parts.append(f"list_price_usd={format_money(list_price)} USD anchor only")
+        if sales_price == 0:
+            context_parts.append("sales_price=0 should be treated as missing or polluted price data, not as value evidence or low-price bait by itself")
+
+        return {
+            "currency": "GBP",
+            "target_country": target_country,
+            "target_currency": target_currency,
+            "exchange_rate_to_target_currency": "",
+            "exchange_rate_date": "",
+            "sales_price_local": format_money(sales_price),
+            "list_price_local": "",
+            "shipping_fee_local": format_money(shipping_fee),
+            "landed_cost_usd": "",
+            "landed_cost_local": format_money(landed_cost),
+            "price_input_semantics": "UK sales_price and shipping_fee are native GBP; no conversion applied",
+            "localized_price_context": "; ".join(context_parts),
+        }
+
+    rate = USD_TO_EUR
     sales_local = None if sales_price is None else sales_price * rate
-    list_local = None if list_price is None else list_price * rate
     shipping_local = None if shipping_fee is None else shipping_fee * rate
     landed_local = None if landed_cost is None else landed_cost * rate
 
@@ -560,12 +594,12 @@ def build_localized_price_fields(params):
         f"target_currency={target_currency}",
         f"exchange_rate_source={EXCHANGE_RATE_SOURCE}",
         f"exchange_rate_date={EXCHANGE_RATE_DATE}",
-        f"exchange_rate=1 USD to {format_money(rate)} {target_currency}",
+        f"exchange_rate=1 USD to {rate} {target_currency}",
     ]
     if sales_price is not None:
         context_parts.append(f"sales_price={format_money(sales_price)} USD -> {format_money(sales_local)} {target_currency}")
     if list_price is not None:
-        context_parts.append(f"list_price_usd={format_money(list_price)} USD -> {format_money(list_local)} {target_currency}")
+        context_parts.append(f"list_price_usd={format_money(list_price)} USD anchor only")
     if shipping_fee is not None:
         context_parts.append(f"shipping_fee={format_money(shipping_fee)} USD -> {format_money(shipping_local)} {target_currency}")
     if landed_cost is not None:
@@ -574,16 +608,35 @@ def build_localized_price_fields(params):
         context_parts.append("sales_price=0 should be treated as missing or polluted price data, not as value evidence or low-price bait by itself")
 
     return {
+        "currency": "USD",
         "target_country": target_country,
         "target_currency": target_currency,
         "exchange_rate_to_target_currency": str(rate),
         "exchange_rate_date": EXCHANGE_RATE_DATE,
         "sales_price_local": format_money(sales_local),
-        "list_price_local": format_money(list_local),
+        "list_price_local": "",
         "shipping_fee_local": format_money(shipping_local),
         "landed_cost_usd": format_money(landed_cost),
         "landed_cost_local": format_money(landed_local),
+        "price_input_semantics": "EU4 sales_price and shipping_fee are USD; converted to EUR",
         "localized_price_context": "; ".join(context_parts),
+    }
+
+
+def build_new_product_context(params):
+    is_new_product_30d = parse_bool_flag(get_text(params, "is_new_product_30d")) is True
+    cl_pay_sub_order_cnt_text = get_text(params, "cl_pay_sub_order_cnt")
+    cl_pay_sub_order_cnt = parse_float(cl_pay_sub_order_cnt_text)
+    new_product_low_sales = is_new_product_30d and cl_pay_sub_order_cnt is not None and cl_pay_sub_order_cnt < 10
+    return {
+        "is_new_product_30d": is_new_product_30d,
+        "new_product_context": join_nonempty(
+            [
+                f"is_new_product_30d={'true' if is_new_product_30d else 'false'}",
+                f"cl_pay_sub_order_cnt={cl_pay_sub_order_cnt_text}" if cl_pay_sub_order_cnt_text else "",
+                f"new_product_low_sales={'yes' if new_product_low_sales else 'no'}",
+            ]
+        ),
     }
 
 
@@ -703,6 +756,7 @@ def build_debug_mapping(params, output):
         "onnr15",
         "onnr30",
         "target_country",
+        "is_new_product_30d",
     ]
     present = [col for col in source_columns if clean_text(find_param(params, (col,)))]
     return (
@@ -721,6 +775,7 @@ def build_output(params):
     image_fields = build_images(params)
     extra_attributes = image_fields["extra_attributes"]
     localized_price_fields = build_localized_price_fields(params)
+    new_product_fields = build_new_product_context(params)
     output = {
         "product_id": get_text(params, "product_id"),
         "product_name": get_text(params, "product_name"),
@@ -760,7 +815,7 @@ def build_output(params):
         "is_free_return": get_text(params, "is_free_return"),
         "onnr15": get_text(params, "onnr15"),
         "onnr30": get_text(params, "onnr30"),
-        "currency": "USD",
+        "currency": localized_price_fields["currency"],
         "target_country": localized_price_fields["target_country"],
         "target_currency": localized_price_fields["target_currency"],
         "exchange_rate_to_target_currency": localized_price_fields["exchange_rate_to_target_currency"],
@@ -770,7 +825,10 @@ def build_output(params):
         "shipping_fee_local": localized_price_fields["shipping_fee_local"],
         "landed_cost_usd": localized_price_fields["landed_cost_usd"],
         "landed_cost_local": localized_price_fields["landed_cost_local"],
+        "price_input_semantics": localized_price_fields["price_input_semantics"],
         "localized_price_context": localized_price_fields["localized_price_context"],
+        "is_new_product_30d": new_product_fields["is_new_product_30d"],
+        "new_product_context": new_product_fields["new_product_context"],
         "shop_info": build_shop_info(params),
         "review_context": build_review_context(params),
         "logistics_info": build_logistics_info(params),
