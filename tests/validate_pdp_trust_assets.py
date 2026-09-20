@@ -371,8 +371,9 @@ def test_final_data_cleaning_code_node_parses_and_maps_rpc_images():
     assert output["avg_star_rating"] == "3.3"
     assert output["review_contents"] == "[\"Stops charging after a week\", \"Weak magnet but OK\", \"Works fine\"]"
     assert output["review_cnt_td"] == "1656"
-    assert output["images"] == ["https://example.com/hd1.jpeg", "https://example.com/detail.jpeg?x=1"]
-    assert output["image_source"] == "rpc_ProductMeta.images+product_desc_images"
+    assert output["product_main_images"] == ["https://example.com/hd1.jpeg", "https://example.com/hd2.jpeg"]
+    assert output["images"] == ["https://example.com/hd1.jpeg", "https://example.com/hd2.jpeg"]
+    assert output["image_source"] == "rpc_ProductMeta.images"
     assert "flash_sale" in output["logistics_info"]
     assert "free_return" in output["logistics_info"]
     assert "onnr15=0.05" in output["governance_metrics"]
@@ -396,14 +397,14 @@ def test_final_data_cleaning_preserves_all_product_main_images():
                 "ProductMeta.images": {
                     "feature_code": "ProductMeta.images",
                     "feature_type": "Array",
-                    "feature_value": json.dumps(["https://example.com/main-1.jpeg", "https://example.com/main-2.jpeg", "https://example.com/detail-long.jpeg"]),
+                    "feature_value": json.dumps(["https://example.com/main-1.jpeg", "https://example.com/main-1.jpeg", "https://example.com/main-2.jpeg"]),
                 }
             },
         }
     }
     output = namespace["build_output"]({"product_id": "all-images-case", "product_name": "All Image Case", "target_country": "UK", "rpc_images": payload})
-    assert output["product_main_images"] == ["https://example.com/main-1.jpeg", "https://example.com/main-2.jpeg", "https://example.com/detail-long.jpeg"]
-    assert output["images"][:3] == output["product_main_images"]
+    assert output["product_main_images"] == ["https://example.com/main-1.jpeg", "https://example.com/main-1.jpeg", "https://example.com/main-2.jpeg"]
+    assert output["images"] == ["https://example.com/main-1.jpeg", "https://example.com/main-2.jpeg"]
     assert "product_main_images_count=3" in output["image_manifest"]
     assert "first image only" not in output["final_data_cleaning_debug"].lower()
 
@@ -453,6 +454,118 @@ def test_final_data_cleaning_parses_product_extra_attributes_rpc():
     assert '"label": "Pattern"' in output["product_attributes_json"]
     assert "product_attributes=yes" in output["extra_attributes_source"]
     assert "size_chart_images_count=1" in output["image_manifest"]
+
+
+def test_final_data_cleaning_does_not_duplicate_object_shaped_product_images():
+    namespace = load_code_node("code_nodes/final_data_cleaning_pdp_trust_v1.py")
+    payload = {
+        "output": {
+            "result": {
+                "ProductMeta.images": {
+                    "feature_code": "ProductMeta.images",
+                    "feature_type": "Array",
+                    "feature_value": json.dumps([
+                        {"url": "https://example.com/object-main-1.jpeg"},
+                        {"url": "https://example.com/object-main-2.jpeg"},
+                    ]),
+                }
+            }
+        }
+    }
+    output = namespace["build_output"]({"product_id": "object-images-case", "target_country": "UK", "rpc_images": payload})
+    assert output["product_main_images"] == ["https://example.com/object-main-1.jpeg", "https://example.com/object-main-2.jpeg"]
+    assert output["images"] == ["https://example.com/object-main-1.jpeg", "https://example.com/object-main-2.jpeg"]
+
+
+def test_final_data_cleaning_falls_back_to_generic_rpc_url_wrapper():
+    namespace = load_code_node("code_nodes/final_data_cleaning_pdp_trust_v1.py")
+    output = namespace["build_output"](
+        {
+            "product_id": "generic-url-wrapper-case",
+            "target_country": "UK",
+            "rpc_images": {"output": {"url": "https://example.com/generic-main.jpeg"}},
+        }
+    )
+    assert output["product_main_images"] == ["https://example.com/generic-main.jpeg"]
+    assert output["images"] == ["https://example.com/generic-main.jpeg"]
+    assert output["image_source"] == "rpc_ProductMeta.images"
+
+
+def test_final_data_cleaning_parses_literal_extra_attributes_with_short_feature_codes():
+    namespace = load_code_node("code_nodes/final_data_cleaning_pdp_trust_v1.py")
+    payload = {
+        "output": {
+            "result": {
+                "product_extra_attributes.product_attributes": {
+                    "feature_code": "product_attributes",
+                    "feature_value": json.dumps([{"label": "Material", "value": "Cotton"}]),
+                },
+                "product_extra_attributes.size_chart": {
+                    "feature_code": "size_chart",
+                    "feature_value": json.dumps(["https://example.com/short-size-chart.jpeg"]),
+                },
+            }
+        }
+    }
+    output = namespace["build_output"]({"product_id": "short-feature-code-case", "target_country": "UK", "product_extra_attributes": payload})
+    assert output["product_attributes_text"] == "Material=Cotton"
+    assert '"label": "Material"' in output["product_attributes_json"]
+    assert output["size_chart_images"] == ["https://example.com/short-size-chart.jpeg"]
+    assert output["images"] == ["https://example.com/short-size-chart.jpeg"]
+
+
+def test_final_data_cleaning_does_not_treat_extra_attributes_size_chart_as_product_main_images():
+    namespace = load_code_node("code_nodes/final_data_cleaning_pdp_trust_v1.py")
+    size_url = "https://example.com/extra-only-size-chart.jpeg"
+    payload = {
+        "output": {
+            "result": {
+                "product_extra_attributes.size_chart": {
+                    "feature_code": "product_extra_attributes.size_chart",
+                    "feature_type": "Array",
+                    "feature_value": json.dumps([size_url]),
+                },
+            }
+        }
+    }
+    output = namespace["build_output"](
+        {
+            "product_id": "extra-attributes-only-case",
+            "target_country": "UK",
+            "product_extra_attributes": payload,
+        }
+    )
+    assert output["product_main_images"] == []
+    assert output["size_chart_images"] == [size_url]
+    assert output["images"] == [size_url]
+    assert "rpc_ProductMeta.images" not in output["image_source"]
+
+
+def test_final_data_cleaning_does_not_treat_nested_extra_attributes_size_chart_as_product_main_images():
+    namespace = load_code_node("code_nodes/final_data_cleaning_pdp_trust_v1.py")
+    size_url = "https://example.com/nested-extra-only-size-chart.jpeg"
+    payload = {
+        "output": {
+            "result": {
+                "product_extra_attributes.size_chart": {
+                    "feature_code": "product_extra_attributes.size_chart",
+                    "feature_type": "Array",
+                    "feature_value": json.dumps([size_url]),
+                },
+            }
+        }
+    }
+    output = namespace["build_output"](
+        {
+            "product_id": "nested-extra-attributes-only-case",
+            "target_country": "UK",
+            "input": {"product_extra_attributes": payload},
+        }
+    )
+    assert output["product_main_images"] == []
+    assert output["size_chart_images"] == [size_url]
+    assert output["images"] == [size_url]
+    assert "rpc_ProductMeta.images" not in output["image_source"]
 
 
 def test_context_builder_code_node_builds_single_llm_status_fields():
@@ -935,7 +1048,8 @@ def test_final_data_cleaning_recursively_finds_aicolate_rpc_output_shape():
         },
     }
     output = namespace["build_output"](sample)
-    assert output["images"] == ["https://example.com/philips-hd-1.jpeg"]
+    assert output["product_main_images"] == ["https://example.com/philips-hd-1.jpeg", "https://example.com/philips-hd-2.jpeg"]
+    assert output["images"] == ["https://example.com/philips-hd-1.jpeg", "https://example.com/philips-hd-2.jpeg"]
     assert output["image_source"] == "rpc_ProductMeta.images"
 
 

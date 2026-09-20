@@ -75,10 +75,10 @@ def maybe_json(value):
 
 def split_url_list(value):
     if isinstance(value, list):
-        return [clean_text(x) for x in value if clean_text(x)]
+        return extract_urls_recursive(value)
     parsed = maybe_json(value)
     if isinstance(parsed, list):
-        return [clean_text(x) for x in parsed if clean_text(x)]
+        return extract_urls_recursive(parsed)
     if isinstance(parsed, dict):
         return extract_urls_recursive(parsed)
     text = clean_text(value)
@@ -86,6 +86,43 @@ def split_url_list(value):
         return []
     candidates = re.split(r"[\n,;|]+", text)
     return [clean_text(x) for x in candidates if clean_text(x).startswith(("http://", "https://"))]
+
+
+def dedupe_preserve_order(values):
+    deduped = []
+    seen = set()
+    for value in values:
+        text = clean_text(value)
+        if not text or not text.startswith(("http://", "https://")) or text in seen:
+            continue
+        deduped.append(text)
+        seen.add(text)
+    return deduped
+
+
+def keep_valid_urls(values):
+    urls = []
+    for value in values:
+        text = clean_text(value)
+        if text.startswith(("http://", "https://")):
+            urls.append(text)
+    return urls
+
+
+def parse_jsonish(value, max_depth=4):
+    current = value
+    for _ in range(max_depth):
+        if isinstance(current, (list, dict)):
+            return current
+        text = clean_text(current)
+        if not text:
+            return None
+        try:
+            parsed = json.loads(text)
+        except Exception:
+            return text
+        current = parsed
+    return current
 
 
 def extract_img_urls_from_html(raw_html):
@@ -114,19 +151,21 @@ def extract_urls_recursive(value):
     if isinstance(value, list):
         for item in value:
             for url in extract_urls_recursive(item):
-                if url not in urls:
-                    urls.append(url)
+                urls.append(url)
         return urls
     if isinstance(value, dict):
-        for key in ("url", "uri", "image", "image_url", "origin_url", "originUrl", "thumb_url", "display_url"):
+        url_keys = ("url", "uri", "image", "image_url", "origin_url", "originUrl", "thumb_url", "display_url")
+        handled_keys = set()
+        for key in url_keys:
             if key in value:
+                handled_keys.add(key)
                 for url in extract_urls_recursive(value.get(key)):
-                    if url not in urls:
-                        urls.append(url)
-        for item in value.values():
-            for url in extract_urls_recursive(item):
-                if url not in urls:
                     urls.append(url)
+        for key, item in value.items():
+            if key in handled_keys:
+                continue
+            for url in extract_urls_recursive(item):
+                urls.append(url)
     return urls
 
 
@@ -153,25 +192,75 @@ def get_result_object(payload):
     return payload if isinstance(payload, dict) else {}
 
 
-def extract_rpc_images(params):
-    raw_rpc = find_param(
-        params,
-        (
-            "rpc_images",
-            "ecom_output",
-            "product_image_rpc",
-            "product_image_rpc_output",
-            "image_rpc",
-            "image_rpc_output",
-            "ProductMeta_images",
-            "input",
-            "rpc_input",
-            "output",
-        ),
+def has_product_extra_attributes_payload(params):
+    extra_attribute_keys = (
+        "product_extra_attributes",
+        "product_extra_attributes_rpc",
+        "product_extra_attributes_output",
+        "extra_attributes",
+        "extra_attributes_output",
+        "product_extra_attributes.product_attributes",
+        "product_extra_attributes.product_attributes.feature_value",
+        "product_extra_attributes.size_chart",
+        "product_extra_attributes.size_chart.feature_value",
     )
-    direct_urls = split_url_list(raw_rpc)
-    if direct_urls:
-        return direct_urls
+    extra_feature_codes = (
+        "product_extra_attributes.product_attributes",
+        "product_extra_attributes.size_chart",
+        "product_attributes",
+        "size_chart",
+    )
+
+    def contains_extra_attributes(value):
+        if isinstance(value, str):
+            parsed = maybe_json(value)
+            if parsed is not None:
+                return contains_extra_attributes(parsed)
+            return False
+        if isinstance(value, list):
+            return any(contains_extra_attributes(item) for item in value)
+        if not isinstance(value, dict):
+            return False
+
+        if any(key in value for key in extra_attribute_keys):
+            return True
+        if clean_text(value.get("feature_code")) in extra_feature_codes:
+            return True
+        return any(contains_extra_attributes(child) for child in value.values())
+
+    return contains_extra_attributes(params)
+
+
+def get_explicit_image_rpc_payload(params):
+    image_keys = (
+        "rpc_images",
+        "ecom_output",
+        "product_image_rpc",
+        "product_image_rpc_output",
+        "image_rpc",
+        "image_rpc_output",
+        "ProductMeta_images",
+        "rpc_input",
+    )
+    for key in image_keys:
+        if key in params:
+            return params.get(key)
+
+    if has_product_extra_attributes_payload(params):
+        return None
+
+    for key in ("output", "input"):
+        if key in params:
+            return params.get(key)
+    return None
+
+
+def extract_rpc_images(params):
+    raw_rpc = get_explicit_image_rpc_payload(params)
+    if isinstance(raw_rpc, (list, str)):
+        direct_urls = split_url_list(raw_rpc)
+        if direct_urls:
+            return direct_urls
 
     result = get_result_object(raw_rpc)
     candidates = []
@@ -197,10 +286,164 @@ def extract_rpc_images(params):
         urls = split_url_list(candidate)
         if urls:
             return urls
+    generic_urls = split_url_list(result)
+    if generic_urls:
+        return generic_urls
+    generic_urls = split_url_list(raw_rpc)
+    if generic_urls:
+        return generic_urls
     recursive_urls = find_product_meta_images_recursive(params)
     if recursive_urls:
         return recursive_urls
     return []
+
+
+def build_product_main_images(params):
+    return keep_valid_urls(extract_rpc_images(params))
+
+
+def extract_feature_value_by_code(value, accepted_codes):
+    if isinstance(value, str):
+        parsed = maybe_json(value)
+        if parsed is not None:
+            return extract_feature_value_by_code(parsed, accepted_codes)
+        return None
+    if isinstance(value, list):
+        for item in value:
+            found = extract_feature_value_by_code(item, accepted_codes)
+            if found is not None:
+                return found
+        return None
+    if not isinstance(value, dict):
+        return None
+
+    feature_code = clean_text(value.get("feature_code"))
+    if feature_code in accepted_codes and "feature_value" in value:
+        return value.get("feature_value")
+
+    for child in value.values():
+        found = extract_feature_value_by_code(child, accepted_codes)
+        if found is not None:
+            return found
+    return None
+
+
+def extract_nested_value(value, dotted_key):
+    current = value
+    for part in dotted_key.split("."):
+        if not isinstance(current, dict) or part not in current:
+            return None
+        current = current.get(part)
+    return current
+
+
+def extract_feature_value_from_result(result, literal_key, feature_code):
+    if not isinstance(result, dict):
+        return None
+
+    feature_value_key = literal_key + ".feature_value"
+    if feature_value_key in result:
+        return result.get(feature_value_key)
+
+    if literal_key in result:
+        node = result.get(literal_key)
+        if isinstance(node, dict) and "feature_value" in node:
+            return node.get("feature_value")
+        return node
+
+    nested_value = extract_nested_value(result, feature_value_key)
+    if nested_value is not None:
+        return nested_value
+
+    nested_node = extract_nested_value(result, literal_key)
+    if isinstance(nested_node, dict) and "feature_value" in nested_node:
+        return nested_node.get("feature_value")
+    if nested_node is not None:
+        return nested_node
+
+    accepted_codes = {literal_key, feature_code, literal_key.rsplit(".", 1)[-1]}
+    return extract_feature_value_by_code(result, accepted_codes)
+
+
+def extract_product_extra_result(params):
+    raw_rpc = find_param(
+        params,
+        (
+            "product_extra_attributes",
+            "product_extra_attributes_rpc",
+            "product_extra_attributes_output",
+            "extra_attributes",
+            "extra_attributes_output",
+        ),
+    )
+    return get_result_object(raw_rpc)
+
+
+def parse_product_attributes(value):
+    parsed = parse_jsonish(value)
+    if isinstance(parsed, dict) and "feature_value" in parsed:
+        parsed = parse_jsonish(parsed.get("feature_value"))
+    if not isinstance(parsed, list):
+        return []
+
+    normalized = []
+    for item in parsed:
+        item = parse_jsonish(item)
+        if not isinstance(item, dict):
+            continue
+        label = clean_text(
+            item.get("label")
+            or item.get("name")
+            or item.get("key")
+            or item.get("attribute_name")
+            or item.get("attributeLabel")
+        )
+        value_text = clean_text(
+            item.get("value")
+            or item.get("attribute_value")
+            or item.get("attributeValue")
+            or item.get("feature_value")
+        )
+        if label or value_text:
+            normalized.append({"label": label, "value": value_text})
+    return normalized
+
+
+def build_extra_attributes(params):
+    result = extract_product_extra_result(params)
+    product_attributes_value = extract_feature_value_from_result(
+        result,
+        "product_extra_attributes.product_attributes",
+        "product_extra_attributes.product_attributes",
+    )
+    size_chart_value = extract_feature_value_from_result(
+        result,
+        "product_extra_attributes.size_chart",
+        "product_extra_attributes.size_chart",
+    )
+
+    product_attributes = parse_product_attributes(product_attributes_value)
+    product_attributes_text = "; ".join(
+        f"{item['label']}={item['value']}" if item["label"] else item["value"]
+        for item in product_attributes
+        if item.get("label") or item.get("value")
+    )
+    product_attributes_json = json.dumps(product_attributes, ensure_ascii=False) if product_attributes else ""
+    size_chart_images = dedupe_preserve_order(split_url_list(size_chart_value))
+
+    source_parts = [
+        f"product_attributes={'yes' if product_attributes else 'no'}",
+        f"size_chart_images_count={len(size_chart_images)}",
+    ]
+    if not product_attributes and not size_chart_images:
+        source_parts.append("missing_product_extra_attributes")
+
+    return {
+        "product_attributes_text": product_attributes_text,
+        "product_attributes_json": product_attributes_json,
+        "size_chart_images": size_chart_images,
+        "extra_attributes_source": "; ".join(source_parts),
+    }
 
 
 def find_product_meta_images_recursive(value):
@@ -392,21 +635,35 @@ def build_review_context(params):
 
 
 def build_images(params):
-    rpc_images = extract_rpc_images(params)
-    desc_images = extract_img_urls_from_html(find_param(params, ("product_desc",)))
-    images = []
-    if rpc_images:
-        images.append(rpc_images[0])
-    for url in desc_images:
-        if url not in images:
-            images.append(url)
-    if rpc_images and desc_images:
-        return images, "rpc_ProductMeta.images+product_desc_images"
-    if rpc_images:
-        return images, "rpc_ProductMeta.images"
-    if desc_images:
-        return images, "missing_rpc_ProductMeta.images+product_desc_images"
-    return [], "missing_rpc_ProductMeta.images"
+    product_main_images = build_product_main_images(params)
+    extra_attributes = build_extra_attributes(params)
+    size_chart_images = extra_attributes["size_chart_images"]
+    images = dedupe_preserve_order(product_main_images + size_chart_images)
+
+    if product_main_images and size_chart_images:
+        image_source = "rpc_ProductMeta.images+product_extra_attributes.size_chart"
+    elif product_main_images:
+        image_source = "rpc_ProductMeta.images"
+    elif size_chart_images:
+        image_source = "missing_product_main_images+product_extra_attributes.size_chart"
+    else:
+        image_source = "missing_product_main_images"
+
+    image_manifest = "; ".join(
+        [
+            f"product_main_images_count={len(product_main_images)}",
+            f"size_chart_images_count={len(size_chart_images)}",
+            "order=product_main_images_then_size_chart_images_deduped",
+        ]
+    )
+    return {
+        "product_main_images": product_main_images,
+        "size_chart_images": size_chart_images,
+        "images": images,
+        "image_source": image_source,
+        "image_manifest": image_manifest,
+        "extra_attributes": extra_attributes,
+    }
 
 
 def build_debug_mapping(params, output):
@@ -448,18 +705,33 @@ def build_debug_mapping(params, output):
         "target_country",
     ]
     present = [col for col in source_columns if clean_text(find_param(params, (col,)))]
-    return "source_columns_present=" + ",".join(present) + f"; images_count={len(output.get('images', []))}; image_source={output.get('image_source', '')}"
+    return (
+        "source_columns_present="
+        + ",".join(present)
+        + f"; images_count={len(output.get('images', []))}"
+        + f"; product_main_images_count={len(output.get('product_main_images', []))}"
+        + f"; size_chart_images_count={len(output.get('size_chart_images', []))}"
+        + f"; image_source={output.get('image_source', '')}"
+        + f"; extra_attributes_source={output.get('extra_attributes_source', '')}"
+    )
 
 
 def build_output(params):
     product_desc = html_to_text(find_param(params, ("product_desc",)))
-    images, image_source = build_images(params)
+    image_fields = build_images(params)
+    extra_attributes = image_fields["extra_attributes"]
     localized_price_fields = build_localized_price_fields(params)
     output = {
         "product_id": get_text(params, "product_id"),
         "product_name": get_text(params, "product_name"),
-        "images": images,
-        "image_source": image_source,
+        "images": image_fields["images"],
+        "product_main_images": image_fields["product_main_images"],
+        "size_chart_images": image_fields["size_chart_images"],
+        "image_source": image_fields["image_source"],
+        "image_manifest": image_fields["image_manifest"],
+        "product_attributes_text": extra_attributes["product_attributes_text"],
+        "product_attributes_json": extra_attributes["product_attributes_json"],
+        "extra_attributes_source": extra_attributes["extra_attributes_source"],
         "product_desc": product_desc,
         "brand_name": get_text(params, "brand_name"),
         "first_category_name": get_text(params, "first_category_name"),
