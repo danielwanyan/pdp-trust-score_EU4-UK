@@ -2,7 +2,7 @@ import json
 import re
 
 
-VERSION = "2026-08-17-v1"
+VERSION = "2026-09-20-vnext"
 NULL_STRINGS = {"", "null", "NULL", "None", "none", "nan", "NaN"}
 
 
@@ -100,12 +100,41 @@ def trim(text, limit=520):
 
 
 def build_landed_cost(params):
+    landed_cost_local = get_text(params, "landed_cost_local")
+    target_currency = get_text(params, "target_currency")
+    if landed_cost_local:
+        local_value = parse_float(landed_cost_local)
+        formatted_local = f"{local_value:.2f}" if local_value is not None else landed_cost_local
+        return f"landed_cost_local={formatted_local} {target_currency}".strip()
     price = parse_float(get_text(params, "sales_price"))
     shipping = parse_float(get_text(params, "shipping_fee"))
     if price is None and shipping is None:
         return ""
     total = (price or 0) + (shipping or 0)
-    return str(round(total, 2))
+    currency = get_text(params, "currency")
+    target_country = get_text(params, "target_country").upper()
+    landed_value = f"{total:.2f} {currency}".strip()
+    if target_country in {"DE", "FR", "ES", "IT"} and currency == "USD":
+        return f"raw_input_landed_cost={landed_value}; local landed cost missing"
+    return f"landed_cost={landed_value}"
+
+
+def build_localized_price_context_for_case_state(params):
+    landed_cost_local = get_text(params, "landed_cost_local")
+    if not landed_cost_local:
+        return trim(get_text(params, "localized_price_context"), 220)
+    local_value = parse_float(landed_cost_local)
+    formatted_local = f"{local_value:.2f}" if local_value is not None else landed_cost_local
+    target_currency = get_text(params, "target_currency")
+    target_country = get_text(params, "target_country").upper()
+    parts = [
+        f"target_country={target_country or 'missing'}",
+        f"target_currency={target_currency or 'missing'}",
+        f"landed_cost_local={formatted_local} {target_currency}".strip(),
+    ]
+    if target_country in {"DE", "FR", "ES", "IT"}:
+        parts.append("use local EUR landed cost for EU4 value reasoning")
+    return "; ".join(parts)
 
 
 def build_visual_sources(params):
@@ -136,6 +165,7 @@ def build_image_source_lines(visual_sources):
 
 def build_case_state(params, visual_sources):
     landed_cost = build_landed_cost(params)
+    localized_price_context = build_localized_price_context_for_case_state(params)
     parts = [
         "Context Builder status for single-LLM PDP Trust evaluation.",
         f"product_id={get_text(params, 'product_id') or 'missing'}",
@@ -149,8 +179,8 @@ def build_case_state(params, visual_sources):
         f"sales_price={get_text(params, 'sales_price') or 'missing'}",
         f"shipping_fee={get_text(params, 'shipping_fee') or 'missing'}",
         f"currency={get_text(params, 'currency') or 'missing'}",
-        f"landed_cost={landed_cost or 'missing'}",
-        f"localized_price_context={trim(get_text(params, 'localized_price_context'), 220) or 'missing'}",
+        landed_cost or "landed_cost=missing",
+        f"localized_price_context={localized_price_context or 'missing'}",
         f"review_cnt_td={get_text(params, 'review_cnt_td', 'comment_cnt_td') or 'missing'}",
         f"avg_review_star_td={get_text(params, 'avg_review_star_td') or 'missing'}",
         f"avg_star_rating={get_text(params, 'avg_star_rating') or 'missing'}",

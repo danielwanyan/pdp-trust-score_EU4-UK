@@ -280,6 +280,13 @@ def parse_float(text):
         return None
 
 
+def format_money_text(value):
+    number = parse_float(value)
+    if number is None:
+        return str(value or "").strip()
+    return f"{number:.2f}"
+
+
 def parse_int(text):
     number = parse_float(text)
     if number is None:
@@ -378,6 +385,7 @@ def collect_pdp(params):
         "shipping_fee_local": text_param(params, "shipping_fee_local"),
         "landed_cost_usd": text_param(params, "landed_cost_usd"),
         "landed_cost_local": text_param(params, "landed_cost_local"),
+        "price_input_semantics": text_param(params, "price_input_semantics"),
         "localized_price_context": text_param(params, "localized_price_context"),
         "landed_cost": "" if landed is None else str(round(landed, 2)),
         "product_main_images": text_param(params, "product_main_images"),
@@ -1005,13 +1013,24 @@ def infer_price_warning(pdp, tags):
     list_price = parse_float(pdp.get("list_price_usd"))
     shipping = parse_float(pdp.get("shipping_fee"))
     face_value = parse_float(pdp.get("face_value"))
+    target_country = (pdp.get("target_country") or "").upper()
+    target_currency = pdp.get("target_currency") or ""
+    input_currency = pdp.get("currency") or ""
     parts = []
-    if pdp.get("landed_cost"):
-        parts.append(f"landed_cost = product price + shipping = {pdp.get('landed_cost')} {pdp.get('currency') or ''}".strip())
+    if pdp.get("landed_cost_local"):
+        parts.append(f"landed_cost_local={format_money_text(pdp.get('landed_cost_local'))} {target_currency}".strip())
+    elif pdp.get("landed_cost"):
+        landed_value = f"{format_money_text(pdp.get('landed_cost'))} {input_currency}".strip()
+        if target_country in {"DE", "FR", "ES", "IT"} and input_currency == "USD":
+            parts.append(f"raw_input_landed_cost={landed_value}; local landed cost missing; use localized_price_context when available")
+        else:
+            parts.append(f"landed_cost={landed_value}")
     else:
         parts.append("landed_cost missing or partially missing: judge value from visible price/shipping fields only")
     if price == 0:
         parts.append("sales_price=0 appears to be missing or polluted price data: do not evaluate value from sales_price=0, do not treat it as strong value or low-price bait by itself")
+    if pdp.get("price_input_semantics"):
+        parts.append(pdp.get("price_input_semantics"))
     if pdp.get("localized_price_context"):
         parts.append(pdp.get("localized_price_context"))
     elif pdp.get("currency") == "USD" or pdp.get("price"):
