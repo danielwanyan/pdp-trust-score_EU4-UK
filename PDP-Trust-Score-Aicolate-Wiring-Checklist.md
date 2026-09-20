@@ -1,26 +1,60 @@
 # PDP Trust Score EU4+UK Aicolate Wiring Checklist
 
-Repository:
+This checklist is for the isolated `pdp-trust-score_EU4-UK` merged vNext workflow.
+
+## Runtime Shape
+
+The workflow is a single product per invocation and one product per workflow call. It has exactly one LLM node and only one LLM in the production path: `Trust_Evaluator`.
 
 ```text
-https://github.com/danielwanyan/pdp-trust-score_EU4-UK
+Start / Excel row
+  -> product_image_rpc
+  -> product_extra_attributes_rpc
+  -> Final_data_cleaning
+  -> Rules_Brain
+  -> Context_Builder
+  -> Trust_Evaluator
+  -> End
 ```
 
-This copybook is for the merged UK+EU4 vNext workflow. It evaluates a single product per invocation and one product per workflow call. The active workflow has exactly one LLM and only one LLM: `Trust_Evaluator`.
+## Start Inputs
 
-## Node Order
+Use flat variable names:
 
 ```text
-Start
-product_image_rpc
-product_extra_attributes_rpc
-rules_text_fetch
-rules_json_fetch
-Final_data_cleaning
-Rules_Brain
-Context_Builder
-Trust_Evaluator
-End
+product_id: String
+target_country: String
+is_new_product_30d: String
+product_name: String
+brand_name: String
+first_category_name: String
+shop_name: String
+product_desc: String
+comment_summary_text: String
+review_contents: String
+is_official_tag: String
+is_free_shipping_fee: String
+has_flash_sale: String
+is_free_return: String
+sku_cnt: String
+shop_sales: String
+shop_fans: String
+comment_cnt_td: String
+cl_pay_sub_order_cnt: String
+review_cnt_td: String
+pv_rank: String
+video_product_show_cnt: String
+is_main_img_firstimg_quality: String
+prd_basic_info_score: String
+list_price_usd: String
+sales_price: String
+shop_final_score: String
+avg_review_star_td: String
+with_image_comment_ratio: String
+avg_star_rating: String
+shipping_fee: String
+onnr15: String
+onnr30: String
 ```
 
 ## RPC Nodes
@@ -31,7 +65,7 @@ End
 ProductMeta.images
 ```
 
-Map into `Final_data_cleaning`:
+Map:
 
 ```text
 rpc_images = product_image_rpc.output
@@ -44,7 +78,7 @@ product_extra_attributes.product_attributes
 product_extra_attributes.size_chart
 ```
 
-Map into `Final_data_cleaning`:
+Map:
 
 ```text
 product_extra_attributes = product_extra_attributes_rpc.output
@@ -52,62 +86,29 @@ product_extra_attributes = product_extra_attributes_rpc.output
 
 ## Rule Fetch Nodes
 
-`rules_text_fetch`:
+Configure HTTP GET nodes after pushing this repository:
 
 ```text
+rules_text_fetch:
 https://raw.githubusercontent.com/danielwanyan/pdp-trust-score_EU4-UK/main/rules/pdp_trust_rules_compressed_v1.txt
-```
 
-`rules_json_fetch`:
-
-```text
+rules_json_fetch:
 https://raw.githubusercontent.com/danielwanyan/pdp-trust-score_EU4-UK/main/rules/pdp_trust_rules_structured_v1.json
 ```
 
-## Final_data_cleaning Input Variables
+Map the compressed rulebook exactly once:
 
 ```text
-product_id = Start.product_id
-target_country = Start.target_country
-is_new_product_30d = Start.is_new_product_30d
-product_name = Start.product_name
-brand_name = Start.brand_name
-first_category_name = Start.first_category_name
-shop_name = Start.shop_name
-product_desc = Start.product_desc
-review_contents = Start.review_contents
-comment_summary_text = Start.comment_summary_text
-comment_30d_emotion = Start.comment_30d_emotion
-is_official_tag = Start.is_official_tag
-is_free_shipping_fee = Start.is_free_shipping_fee
-has_flash_sale = Start.has_flash_sale
-is_free_return = Start.is_free_return
-sku_cnt = Start.sku_cnt
-shop_sales = Start.shop_sales
-shop_fans = Start.shop_fans
-comment_cnt_td = Start.comment_cnt_td
-cl_pay_sub_order_cnt = Start.cl_pay_sub_order_cnt
-review_cnt_td = Start.review_cnt_td
-pv_rank = Start.pv_rank
-video_product_show_cnt = Start.video_product_show_cnt
-is_main_img_firstimg_quality = Start.is_main_img_firstimg_quality
-prd_basic_info_score = Start.prd_basic_info_score
-list_price_usd = Start.list_price_usd
-sales_price = Start.sales_price
-shop_final_score = Start.shop_final_score
-avg_review_star_td = Start.avg_review_star_td
-with_image_comment_ratio = Start.with_image_comment_ratio
-avg_star_rating = Start.avg_star_rating
-shipping_fee = Start.shipping_fee
-onnr15 = Start.onnr15
-onnr30 = Start.onnr30
-rpc_images = product_image_rpc.output
-product_extra_attributes = product_extra_attributes_rpc.output
+body = rules_text_fetch.body
+```
+
+Map the structured rules:
+
+```text
+rules_json = rules_json_fetch.body
 ```
 
 ## Final_data_cleaning Output Panel
-
-Declare:
 
 ```text
 product_id: String
@@ -167,41 +168,7 @@ governance_metrics: String
 final_data_cleaning_debug: String
 ```
 
-## Rules_Brain Input Variables
-
-```text
-rules_json = rules_json_fetch.body
-product_id = Final_data_cleaning.product_id
-product_name = Final_data_cleaning.product_name
-brand_name = Final_data_cleaning.brand_name
-first_category_name = Final_data_cleaning.first_category_name
-product_desc = Final_data_cleaning.product_desc
-product_main_images = Final_data_cleaning.product_main_images
-size_chart_images = Final_data_cleaning.size_chart_images
-image_manifest = Final_data_cleaning.image_manifest
-product_attributes_text = Final_data_cleaning.product_attributes_text
-target_country = Final_data_cleaning.target_country
-target_currency = Final_data_cleaning.target_currency
-localized_price_context = Final_data_cleaning.localized_price_context
-price_input_semantics = Final_data_cleaning.price_input_semantics
-is_new_product_30d = Final_data_cleaning.is_new_product_30d
-new_product_context = Final_data_cleaning.new_product_context
-shop_name = Final_data_cleaning.shop_name
-is_official_tag = Final_data_cleaning.is_official_tag
-shop_final_score = Final_data_cleaning.shop_final_score
-shop_sales = Final_data_cleaning.shop_sales
-shop_fans = Final_data_cleaning.shop_fans
-review_cnt_td = Final_data_cleaning.review_cnt_td
-avg_review_star_td = Final_data_cleaning.avg_review_star_td
-avg_star_rating = Final_data_cleaning.avg_star_rating
-review_contents = Final_data_cleaning.review_contents
-comment_summary_text = Final_data_cleaning.comment_summary_text
-cl_pay_sub_order_cnt = Final_data_cleaning.cl_pay_sub_order_cnt
-```
-
 ## Rules_Brain Output Panel
-
-Declare:
 
 ```text
 rules_context: String
@@ -213,39 +180,12 @@ risk_hints: String
 evidence_gaps: String
 review_context: String
 price_context: String
-rules_review_context: String
 rules_version: String
 rules_source_warning: String
 pdp_debug_summary: String
 ```
 
-## Context_Builder Input Variables
-
-```text
-product_id = Final_data_cleaning.product_id
-product_name = Final_data_cleaning.product_name
-target_country = Final_data_cleaning.target_country
-target_currency = Final_data_cleaning.target_currency
-product_main_images = Final_data_cleaning.product_main_images
-size_chart_images = Final_data_cleaning.size_chart_images
-images = Final_data_cleaning.images
-image_manifest = Final_data_cleaning.image_manifest
-product_attributes_text = Final_data_cleaning.product_attributes_text
-is_new_product_30d = Final_data_cleaning.is_new_product_30d
-new_product_context = Rules_Brain.new_product_context
-visual_evidence_context = Rules_Brain.visual_evidence_context
-locale_context = Rules_Brain.locale_context
-price_context = Rules_Brain.price_context
-rules_context = Rules_Brain.rules_context
-matched_rules = Rules_Brain.matched_rules
-risk_hints = Rules_Brain.risk_hints
-evidence_gaps = Rules_Brain.evidence_gaps
-rules_review_context = Rules_Brain.rules_review_context
-```
-
 ## Context_Builder Output Panel
-
-Declare:
 
 ```text
 case_state: String
@@ -254,14 +194,14 @@ decision_checklist: String
 context_builder_debug: String
 ```
 
-## Trust_Evaluator Input Variables
+## Trust_Evaluator Inputs
 
 Use flat names only:
 
 ```text
-body = rules_text_fetch.body
+body receives the compressed rulebook from rules_text_fetch
 rules_context = Rules_Brain.rules_context
-rules_review_context = Rules_Brain.rules_review_context
+rules_review_context = Rules_Brain.review_context
 price_context = Rules_Brain.price_context
 locale_context = Rules_Brain.locale_context
 visual_evidence_context = Rules_Brain.visual_evidence_context
@@ -282,11 +222,12 @@ product_desc = Final_data_cleaning.product_desc
 brand_name = Final_data_cleaning.brand_name
 first_category_name = Final_data_cleaning.first_category_name
 sku_cnt = Final_data_cleaning.sku_cnt
-is_main_img_firstimg_quality = Final_data_cleaning.is_main_img_firstimg_quality
-prd_basic_info_score = Final_data_cleaning.prd_basic_info_score
-list_price_usd = Final_data_cleaning.list_price_usd
-sales_price = Final_data_cleaning.sales_price
-shipping_fee = Final_data_cleaning.shipping_fee
+review_cnt_td = Final_data_cleaning.review_cnt_td
+comment_cnt_td = Final_data_cleaning.comment_cnt_td
+avg_review_star_td = Final_data_cleaning.avg_review_star_td
+avg_star_rating = Final_data_cleaning.avg_star_rating
+review_contents = Final_data_cleaning.review_contents
+cl_pay_sub_order_cnt = Final_data_cleaning.cl_pay_sub_order_cnt
 currency = Final_data_cleaning.currency
 target_country = Final_data_cleaning.target_country
 target_currency = Final_data_cleaning.target_currency
@@ -298,16 +239,10 @@ is_official_tag = Final_data_cleaning.is_official_tag
 shop_final_score = Final_data_cleaning.shop_final_score
 shop_sales = Final_data_cleaning.shop_sales
 shop_fans = Final_data_cleaning.shop_fans
-comment_cnt_td = Final_data_cleaning.comment_cnt_td
-review_cnt_td = Final_data_cleaning.review_cnt_td
-avg_review_star_td = Final_data_cleaning.avg_review_star_td
-avg_star_rating = Final_data_cleaning.avg_star_rating
-review_contents = Final_data_cleaning.review_contents
-cl_pay_sub_order_cnt = Final_data_cleaning.cl_pay_sub_order_cnt
-with_image_comment_ratio = Final_data_cleaning.with_image_comment_ratio
 comment_summary_text = Final_data_cleaning.comment_summary_text
 comment_30d_emotion = Final_data_cleaning.comment_30d_emotion
 is_free_shipping_fee = Final_data_cleaning.is_free_shipping_fee
+shipping_fee = Final_data_cleaning.shipping_fee
 has_flash_sale = Final_data_cleaning.has_flash_sale
 is_free_return = Final_data_cleaning.is_free_return
 onnr15 = Final_data_cleaning.onnr15
@@ -318,10 +253,12 @@ logistics_info = Final_data_cleaning.logistics_info
 governance_metrics = Final_data_cleaning.governance_metrics
 ```
 
-## Prompt Checks
+## Scoring Reminders
 
-- Use strict target-country language for locale-sensitive evidence. If core information is not understandable in the target-country primary language, `page_quality <= 3`.
-- `product_main_images`, `size_chart_images`, and `product_attributes_text` must be visible in prompt context.
-- `visual_evidence_context`, `case_state`, `evidence_manifest`, and `decision_checklist` must be mapped from the code nodes into `Trust_Evaluator`.
-- Follow `price_input_semantics`: UK GBP native inputs, EU4 USD-to-EUR conversion, and `list_price_usd` anchor only.
-- Use `is_new_product_30d` and `new_product_context` to prevent a mechanical score 3 deboost tier decision on sparse new products when concrete risk evidence is absent.
+- Strict target-country language checks apply to title, `product_main_images`, `size_chart_images`, `product_desc`, and `product_attributes_text`.
+- If core PDP information is not localized into the target-country primary language, `page_quality <= 3`.
+- UK price fields are native GBP. DE, FR, ES, and IT price fields are USD and converted to EUR in `Final_data_cleaning`.
+- `list_price_usd` is an anchor only.
+- `is_new_product_30d=true` and fewer than 10 paid orders reduces product-review-history weight and increases reliance on `shop_sales`, `shop_fans`, `shop_final_score`, page completeness, attributes, and image evidence.
+- New-product tolerance does not override safety, compliance, Stage 1 red flags, IPR or authorization risk, misleading or wrong-item evidence, visible product/spec conflict, or negative `review_contents`.
+- When there is clear bodily harm to the user from avoidable product failure, final score must not exceed 3.
