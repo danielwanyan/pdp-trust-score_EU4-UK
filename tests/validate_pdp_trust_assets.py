@@ -1044,6 +1044,28 @@ def test_context_builder_propagates_new_visual_and_new_product_context():
         assert expected in combined
 
 
+def test_context_builder_falls_back_to_separated_images_when_images_is_empty():
+    namespace = load_code_node("code_nodes/context_builder_pdp_trust_v1.py")
+    output = namespace["build_output"](
+        {
+            "product_id": "ctx-empty-images-case",
+            "product_name": "Context Empty Images Case",
+            "product_main_images": [
+                "https://example.com/main-1.jpeg",
+                "https://example.com/main-2.jpeg",
+            ],
+            "size_chart_images": ["https://example.com/size-chart.jpeg"],
+            "images": "",
+        }
+    )
+
+    combined = "\n".join(str(value) for value in output.values())
+    assert "images_count=3" in combined
+    assert "product_main_images_count=2" in combined
+    assert "size_chart_images_count=1" in combined
+    assert "no image URLs reached the LLM" not in combined
+
+
 def test_final_data_cleaning_accepts_loop_ecom_output_url_array():
     code_path = ROOT / "code_nodes/final_data_cleaning_pdp_trust_v1.py"
     namespace = {"Args": object, "Output": dict}

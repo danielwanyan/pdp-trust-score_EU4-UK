@@ -108,7 +108,33 @@ def build_landed_cost(params):
     return str(round(total, 2))
 
 
-def build_case_state(params, images):
+def build_visual_sources(params):
+    product_main_images = parse_images(find_param(params, ("product_main_images",)))
+    size_chart_images = parse_images(find_param(params, ("size_chart_images",)))
+    raw_images = find_param(params, ("images", "Product_images", "product_images"))
+    images = parse_images(raw_images)
+    if not images:
+        images = product_main_images + size_chart_images
+    return {
+        "images": images,
+        "product_main_images": product_main_images,
+        "size_chart_images": size_chart_images,
+    }
+
+
+def build_image_source_lines(visual_sources):
+    product_main_images = visual_sources["product_main_images"]
+    size_chart_images = visual_sources["size_chart_images"]
+    images = visual_sources["images"]
+    return [
+        f"images_count={len(images)}",
+        f"product_main_images_count={len(product_main_images)}",
+        f"size_chart_images_count={len(size_chart_images)}",
+        "image_sources=product_main_images and size_chart_images are separate source lists; images is the combined visual list when provided, otherwise product_main_images + size_chart_images",
+    ]
+
+
+def build_case_state(params, visual_sources):
     landed_cost = build_landed_cost(params)
     parts = [
         "Context Builder status for single-LLM PDP Trust evaluation.",
@@ -128,13 +154,12 @@ def build_case_state(params, images):
         f"review_cnt_td={get_text(params, 'review_cnt_td', 'comment_cnt_td') or 'missing'}",
         f"avg_review_star_td={get_text(params, 'avg_review_star_td') or 'missing'}",
         f"avg_star_rating={get_text(params, 'avg_star_rating') or 'missing'}",
-        f"images_count={len(images)}",
-        f"image_sources=product_main_images and size_chart_images are separate source lists when provided; images is the combined visual list",
     ]
+    parts.extend(build_image_source_lines(visual_sources))
     return "\n".join(parts)
 
 
-def build_evidence_manifest(params, images):
+def build_evidence_manifest(params, visual_sources):
     matched_rules = get_text(params, "matched_rules")
     risk_hints = get_text(params, "risk_hints")
     evidence_gaps = get_text(params, "evidence_gaps")
@@ -142,6 +167,10 @@ def build_evidence_manifest(params, images):
     price_context = get_text(params, "price_context")
     locale_context = get_text(params, "locale_context")
     localized_price_context = get_text(params, "localized_price_context")
+    visual_evidence_context = get_text(params, "visual_evidence_context")
+    image_manifest = get_text(params, "image_manifest")
+    product_attributes_text = get_text(params, "product_attributes_text")
+    new_product_context = get_text(params, "new_product_context")
     product_desc = get_text(params, "product_desc")
     review_contents = get_text(params, "review_contents")
     comment_summary = get_text(params, "comment_summary_text")
@@ -149,8 +178,12 @@ def build_evidence_manifest(params, images):
 
     manifest = [
         "Evidence manifest. Treat these as orientation notes, not as extra rules.",
-        f"images_count={len(images)}",
+        *build_image_source_lines(visual_sources),
         f"image_source={get_text(params, 'image_source') or 'missing'}",
+        f"image_manifest={trim(image_manifest, 500) or 'missing'}",
+        f"visual_evidence_context={trim(visual_evidence_context, 500) or 'missing'}",
+        f"product_attributes_text={trim(product_attributes_text, 700) or 'missing'}",
+        f"new_product_context={trim(new_product_context, 500) or 'missing'}",
         f"product_desc_present={yes_no(bool(product_desc))}",
         f"review_contents_present={yes_no(bool(review_contents))}",
         f"comment_summary_present={yes_no(bool(comment_summary))}",
@@ -168,7 +201,8 @@ def build_evidence_manifest(params, images):
     return "\n".join(manifest)
 
 
-def build_decision_checklist(params, images):
+def build_decision_checklist(params, visual_sources):
+    images = visual_sources["images"]
     rating = parse_float(get_text(params, "avg_review_star_td"))
     recent_rating = parse_float(get_text(params, "avg_star_rating"))
     review_count = parse_int(get_text(params, "review_cnt_td", "comment_cnt_td"))
@@ -179,6 +213,7 @@ def build_decision_checklist(params, images):
         "3. Use evidence_manifest to avoid missing image count, review text, price, shipping, and evidence gaps.",
         "4. Use target-country language and value context: role, strict primary-language rule, localized GBP/EUR landed cost, returns/warranty, plug/voltage, compatibility, and digital redemption region.",
         "5. Visible image/text consistency: compare title, product_main_images, size_chart_images, detail images, quantity, capacity, free shipping, promotion, included items, and core specs.",
+        "5a. Keep product_main_images and size_chart_images source separation visible while treating images as the combined visual list.",
         "6. Review calibration: avg_review_star_td is the primary historical rating; avg_star_rating only supports negative recent downshift, not upgrade.",
         "7. Score 5 gate: require strong trust, clear PDP, healthy reviews, no objective review problem, no safety/IPR/authorization/core-claim/fulfillment instability.",
         "8. Safety hard caps: child-use, powered, battery, heating, eye-contact, ingestible, and body-contact risks need explicit safety consistency checking.",
@@ -198,28 +233,36 @@ def build_decision_checklist(params, images):
     return "\n".join(checklist)
 
 
-def build_debug(params, images):
+def build_debug(params, visual_sources):
+    images = visual_sources["images"]
+    product_main_images = visual_sources["product_main_images"]
+    size_chart_images = visual_sources["size_chart_images"]
     return "; ".join(
         [
             f"context_builder_version={VERSION}",
             f"target_country={get_text(params, 'target_country') or 'missing'}",
             f"target_currency={get_text(params, 'target_currency') or 'missing'}",
             f"images_count={len(images)}",
+            f"product_main_images_count={len(product_main_images)}",
+            f"size_chart_images_count={len(size_chart_images)}",
             f"has_rules_context={yes_no(has_text(params, 'rules_context'))}",
             f"has_risk_hints={yes_no(has_text(params, 'risk_hints'))}",
             f"has_review_contents={yes_no(has_text(params, 'review_contents'))}",
             f"has_product_desc={yes_no(has_text(params, 'product_desc'))}",
+            f"has_locale_context={yes_no(has_text(params, 'locale_context'))}",
+            f"has_new_product_context={yes_no(has_text(params, 'new_product_context'))}",
+            f"has_product_attributes_text={yes_no(has_text(params, 'product_attributes_text'))}",
         ]
     )
 
 
 def build_output(params):
-    images = parse_images(find_param(params, ("images", "Product_images", "product_images")))
+    visual_sources = build_visual_sources(params)
     return {
-        "case_state": build_case_state(params, images),
-        "evidence_manifest": build_evidence_manifest(params, images),
-        "decision_checklist": build_decision_checklist(params, images),
-        "context_builder_debug": build_debug(params, images),
+        "case_state": build_case_state(params, visual_sources),
+        "evidence_manifest": build_evidence_manifest(params, visual_sources),
+        "decision_checklist": build_decision_checklist(params, visual_sources),
+        "context_builder_debug": build_debug(params, visual_sources),
     }
 
 
