@@ -112,10 +112,16 @@ def test_required_files_exist():
 
 def test_structured_rules_schema():
     data = json.loads((ROOT / "rules/pdp_trust_rules_structured_v1.json").read_text())
-    assert data["project"] == "pdp-trust-score"
-    assert data["version"] == "2026-08-06-v2"
-    assert data["locale"] == "UK"
-    assert "British" in data["goal"]
+    assert data["project"] == "pdp-trust-score_EU4-UK"
+    assert data["version"] == "2026-09-20-vnext"
+    assert data["locale"] == "merged_uk_eu4_target_country"
+    assert "UK, DE, FR, ES, IT" in data["goal"]
+    assert set(data["locale_profiles"]) == SUPPORTED_TARGET_COUNTRIES
+    for target_country, expected_currency in EXPECTED_TARGET_CURRENCIES.items():
+        profile = data["locale_profiles"][target_country]
+        assert profile["target_currency"] == expected_currency
+        assert profile["primary_language"]
+        assert profile["buyer_persona"]
     assert data["score_fields"] == sorted(REQUIRED_SCORE_FIELDS)
     assert data["allowed_b_end_reasons"] == ALLOWED_B_END_REASONS
     rule_ids = {rule["id"] for rule in data["rules"]}
@@ -141,6 +147,48 @@ def test_structured_rules_schema():
         "BRAND-02",
     ]:
         assert required in rule_ids
+
+
+def test_rulebook_contains_strict_localization_and_new_product_rules():
+    structured_text = (ROOT / "rules/pdp_trust_rules_structured_v1.json").read_text()
+    compressed_text = (ROOT / "rules/pdp_trust_rules_compressed_v1.txt").read_text()
+    combined = structured_text + "\n" + compressed_text
+    for expected in [
+        "page_quality <= 3",
+        "size_chart_images",
+        "product_main_images",
+        "target-country primary language",
+        "is_new_product_30d",
+        "cl_pay_sub_order_cnt < 10",
+        "shop_sales",
+        "shop_fans",
+        "shop_final_score",
+        "score 3 is not a harmless neutral value",
+    ]:
+        assert expected in combined
+
+
+def test_prompts_include_new_visual_attribute_and_new_product_inputs():
+    system_text = (ROOT / "prompts/trust_evaluator_system_prompt_v1.txt").read_text()
+    user_text = (ROOT / "prompts/trust_evaluator_user_prompt_v1.txt").read_text()
+    combined = system_text + "\n" + user_text
+    for expected in [
+        "{{product_main_images}}",
+        "{{size_chart_images}}",
+        "{{product_attributes_text}}",
+        "{{image_manifest}}",
+        "{{price_input_semantics}}",
+        "{{is_new_product_30d}}",
+        "{{new_product_context}}",
+        "{{visual_evidence_context}}",
+        "page_quality <= 3",
+        "主图",
+        "尺码图",
+        "长图",
+        "新品",
+        "3 分不是普通中性分",
+    ]:
+        assert expected in combined
 
 
 def test_system_prompts_are_aicolate_safe_plain_text():
