@@ -1,0 +1,824 @@
+{
+  "project": "pdp-trust-score",
+  "version": "2026-08-06-v2",
+  "locale": "dynamic_target_country",
+  "goal": "Score TikTok Shop PDP purchase trust from the viewpoint of the local TikTok Shop buyer indicated by target_country.",
+  "exchange_rate_baseline": {
+    "source": "Frankfurter API",
+    "date": "2026-08-14",
+    "base": "USD",
+    "rates": {
+      "GBP": 0.73874,
+      "EUR": 0.86453
+    }
+  },
+  "locale_profiles": {
+    "UK": {
+      "buyer_persona": "British TikTok Shop shopper",
+      "primary_language": "English",
+      "tolerated_languages": [
+        "English",
+        "German",
+        "French",
+        "Spanish",
+        "Italian",
+        "Dutch",
+        "Polish",
+        "Swedish",
+        "other European languages"
+      ],
+      "target_currency": "GBP",
+      "language_tolerance": "English is the clearest target-market language. Other European languages are not negative by themselves, but page_quality should go down when a UK buyer cannot understand core specs, safety, warranty, return, plug/voltage, compatibility, expiry, or digital redemption restrictions.",
+      "value_judgment": "Judge value from the UK buyer perspective using localized GBP landed cost converted from USD. Consider shipping share, return/warranty clarity, UK plug/voltage compatibility, and whether price makes sense only after trust is credible."
+    },
+    "DE": {
+      "buyer_persona": "German TikTok Shop shopper",
+      "primary_language": "German",
+      "tolerated_languages": [
+        "German",
+        "English",
+        "French",
+        "Spanish",
+        "Italian",
+        "Dutch",
+        "Polish",
+        "other European languages"
+      ],
+      "target_currency": "EUR",
+      "language_tolerance": "German is the clearest target-market language. Other European languages are not negative by themselves, but page_quality should go down when a German buyer cannot understand core specs, safety, warranty, return, plug/voltage, compatibility, expiry, or digital redemption restrictions.",
+      "value_judgment": "Judge value from the German buyer perspective using localized EUR landed cost converted from USD. Consider shipping share, return/warranty clarity, EU plug/voltage compatibility, and whether price makes sense only after trust is credible."
+    },
+    "FR": {
+      "buyer_persona": "French TikTok Shop shopper",
+      "primary_language": "French",
+      "tolerated_languages": [
+        "French",
+        "English",
+        "German",
+        "Spanish",
+        "Italian",
+        "Dutch",
+        "Polish",
+        "other European languages"
+      ],
+      "target_currency": "EUR",
+      "language_tolerance": "French is the clearest target-market language. Other European languages are not negative by themselves, but page_quality should go down when a French buyer cannot understand core specs, safety, warranty, return, plug/voltage, compatibility, expiry, or digital redemption restrictions.",
+      "value_judgment": "Judge value from the French buyer perspective using localized EUR landed cost converted from USD. Consider shipping share, return/warranty clarity, EU plug/voltage compatibility, and whether price makes sense only after trust is credible."
+    },
+    "ES": {
+      "buyer_persona": "Spanish TikTok Shop shopper",
+      "primary_language": "Spanish",
+      "tolerated_languages": [
+        "Spanish",
+        "English",
+        "German",
+        "French",
+        "Italian",
+        "Dutch",
+        "Polish",
+        "other European languages"
+      ],
+      "target_currency": "EUR",
+      "language_tolerance": "Spanish is the clearest target-market language. Other European languages are not negative by themselves, but page_quality should go down when a Spanish buyer cannot understand core specs, safety, warranty, return, plug/voltage, compatibility, expiry, or digital redemption restrictions.",
+      "value_judgment": "Judge value from the Spanish buyer perspective using localized EUR landed cost converted from USD. Consider shipping share, return/warranty clarity, EU plug/voltage compatibility, and whether price makes sense only after trust is credible."
+    },
+    "IT": {
+      "buyer_persona": "Italian TikTok Shop shopper",
+      "primary_language": "Italian",
+      "tolerated_languages": [
+        "Italian",
+        "English",
+        "German",
+        "French",
+        "Spanish",
+        "Dutch",
+        "Polish",
+        "other European languages"
+      ],
+      "target_currency": "EUR",
+      "language_tolerance": "Italian is the clearest target-market language. Other European languages are not negative by themselves, but page_quality should go down when an Italian buyer cannot understand core specs, safety, warranty, return, plug/voltage, compatibility, expiry, or digital redemption restrictions.",
+      "value_judgment": "Judge value from the Italian buyer perspective using localized EUR landed cost converted from USD. Consider shipping share, return/warranty clarity, EU plug/voltage compatibility, and whether price makes sense only after trust is credible."
+    }
+  },
+  "score_fields": [
+    "authenticity_delivery",
+    "compliance",
+    "page_quality",
+    "quality",
+    "safety",
+    "score",
+    "value"
+  ],
+  "allowed_b_end_reasons": [
+    "正品、品牌或渠道可信度不足",
+    "商品信息存在误导或货不对板风险",
+    "安全风险",
+    "内容合规或侵权风险",
+    "履约或售后保障不足",
+    "评分或评价表现偏弱",
+    "质量问题集中",
+    "页面关键信息或实物展示不足",
+    "价格或到手价不具备竞争力",
+    "低价异常导致不可信",
+    "特殊商品关键信息披露不足"
+  ],
+  "dimension_definitions": {
+    "authenticity_delivery": "Whether the product is genuine or honestly represented, can be delivered, matches the PDP, and avoids scam, counterfeit, wrong item, misleading spec, missing pieces, opened/damaged packaging, invalid digital code, or never-received risk.",
+    "quality": "Reliability of function, material, durability, sizing/spec accuracy, packaging condition, and for digital codes whether the code works, is not already redeemed, and can be redeemed successfully.",
+    "value": "Price, shipping fee, landed cost, unit value, brand/white-label price justification, and whether any discount is credible after trust has been established.",
+    "page_quality": "Completeness, clarity, real PDP evidence, description, SKU/spec/size/quantity/material/ingredient/region/redeem/refund details, and whether images and text reduce uncertainty.",
+    "safety": "Default 5 unless PDP evidence shows safety injury, account phishing, harmful regulated use, fire, burn, allergy, contamination, child/pet adverse reaction, or similar hard risk.",
+    "compliance": "Default 5 unless PDP evidence shows explicit content, illegal/regulated content, gray-market transaction, strong counterfeit/IP/trade-dress red line, or platform high-risk content."
+  },
+  "rules": [
+    {
+      "id": "CORE-01",
+      "name": "Trust axis first",
+      "category": "core",
+      "applies_to": [
+        "all"
+      ],
+      "text": "Score is not a six-field average. Authenticity, delivery, quality, safety, scam, counterfeit, wrong-item, invalid-code, and PDP honesty define the baseline. Price only adjusts after trust is credible."
+    },
+    {
+      "id": "CORE-02",
+      "name": "Evidence default",
+      "category": "core",
+      "applies_to": [
+        "all"
+      ],
+      "text": "Default neutral is 3, but down-scoring needs PDP-visible evidence. Unknown brand, empty brand_name, no reviews, ordinary white label, polished commercial images, no backend data, and no price anchor are not standalone negative evidence."
+    },
+    {
+      "id": "CORE-03",
+      "name": "No backend speculation",
+      "category": "core",
+      "applies_to": [
+        "all"
+      ],
+      "text": "Use only PDP-visible static information. Do not use unseen seller history, return rate, complaint rate, risk score, supply chain, authorization proof, or unseen video content."
+    },
+    {
+      "id": "CORE-04",
+      "name": "Category sensitivity first",
+      "category": "core",
+      "applies_to": [
+        "all"
+      ],
+      "text": "Before scoring, classify the product into Level 1 to Level 5 by purchase harm and trust sensitivity. If multiple levels apply, use the higher sensitivity."
+    },
+    {
+      "id": "PAGE-01",
+      "name": "Target-country language fairness",
+      "category": "page_quality",
+      "applies_to": [
+        "all"
+      ],
+      "text": "Use the target_country locale profile. EU cross-border PDPs may use English, German, French, Spanish, Italian, Dutch, Polish, Swedish, and other European languages. Non-local language is not a negative signal by itself. Penalize language only when the target-country buyer cannot understand core information, when mixed languages obscure core information, or when the PDP fails to disclose key specs, safety instructions, warranty, return, region, plug/voltage, compatibility, expiry, or digital redemption restrictions in a way the target-country buyer can reasonably use. Detail images with readable claims or specs count as PDP presentation evidence even when product_desc text is sparse."
+    },
+    {
+      "id": "LEVEL-01",
+      "name": "Level 1 very high trust sensitivity",
+      "category": "category_level",
+      "applies_to": [
+        "food",
+        "supplement",
+        "health",
+        "baby",
+        "pet food",
+        "battery",
+        "power",
+        "charger",
+        "luxury",
+        "sneaker",
+        "jersey",
+        "collectible",
+        "digital code",
+        "gift card",
+        "phone",
+        "computer"
+      ],
+      "text": "Food, ingestible, supplements, baby/pet food, battery/power/high-watt electronics, phones/computers, luxury, sneakers, jerseys, high-value collectibles, official/authentic/authorized IP goods, and digital cards/codes need strong brand/channel/page/review proof. White label or weak channel usually sits at 2 to 3 unless strongly self-proven."
+    },
+    {
+      "id": "LEVEL-02",
+      "name": "Level 2 high trust sensitivity",
+      "category": "category_level",
+      "applies_to": [
+        "beauty",
+        "personal care",
+        "fragrance",
+        "hair care",
+        "beauty tool",
+        "small appliance",
+        "child toy",
+        "sports protector",
+        "fitness",
+        "massage",
+        "digital accessory"
+      ],
+      "text": "Body-contact, efficacy, electrical, material, durability, or after-sale risk categories can support white labels, but need at least two strong signals among reviews, page clarity, price reasonableness, and no concentrated safety/quality/wrong-item complaints."
+    },
+    {
+      "id": "LEVEL-03",
+      "name": "Level 3 medium trust sensitivity",
+      "category": "category_level",
+      "applies_to": [
+        "home",
+        "kitchen",
+        "cleaning",
+        "apparel",
+        "shoes",
+        "bag",
+        "non-food pet",
+        "travel",
+        "office",
+        "auto",
+        "sports accessory"
+      ],
+      "text": "Ordinary home, kitchen, cleaning, apparel, non-food pet, travel, office, auto, and regular accessories are mainly judged by reviews, quality, value, and page clarity. Unknown brand is usually neutral."
+    },
+    {
+      "id": "LEVEL-04",
+      "name": "Level 4 low brand sensitivity style goods",
+      "category": "category_level",
+      "applies_to": [
+        "phone case",
+        "jewelry",
+        "hair accessory",
+        "sticker",
+        "keychain",
+        "party decoration",
+        "holiday decoration",
+        "desk decor",
+        "low-risk accessory"
+      ],
+      "text": "Low-risk style/decor/accessory goods are white-label friendly. Evaluate image-text consistency, price, page clarity, and reviews. Ordinary IP, meme, fan-style, or pop-culture design is not automatically a red line."
+    },
+    {
+      "id": "LEVEL-05",
+      "name": "Level 5 very low brand sensitivity disposable goods",
+      "category": "category_level",
+      "applies_to": [
+        "party prop",
+        "gift bag",
+        "wrapping paper",
+        "novelty",
+        "low-risk disposable"
+      ],
+      "text": "Very low-risk disposable or temporary goods mostly need clear size, count, use, material, fair landed cost, and no obvious scam/wrong-item/compliance risk."
+    },
+    {
+      "id": "STAGE1-01",
+      "name": "Scam, wrong item, misleading PDP",
+      "category": "red_flag",
+      "applies_to": [
+        "all"
+      ],
+      "cap_score": 2,
+      "text": "Red flag if PDP evidence shows irrational price, shipping trap, off-platform transaction, severe title-image mismatch, fake specs/count/gifts, multiple reviews proving not as described, core claim disproven, digital code not delivered, invalid, already used, or misleading face value/region/redemption."
+    },
+    {
+      "id": "STAGE1-02",
+      "name": "Counterfeit or non-genuine",
+      "category": "red_flag",
+      "applies_to": [
+        "brand",
+        "luxury",
+        "sneaker",
+        "jersey",
+        "fragrance",
+        "collectible",
+        "gift card",
+        "strong genuine market"
+      ],
+      "cap_score": 2,
+      "text": "Red flag when a high-genuine-market brand appears in weak/unverified channel with abnormal price, multiple fake/counterfeit/not genuine reviews, PDP packaging/price/store combination cannot support genuineness, or a digital card/code impersonates official or authorized channel."
+    },
+    {
+      "id": "STAGE1-03",
+      "name": "Safety harm",
+      "category": "red_flag",
+      "applies_to": [
+        "safety"
+      ],
+      "cap_score": 2,
+      "text": "Usually requires safety incidents at scale plus weak overall rating and concentrated safety complaints. Hard defects such as charger fire, battery swelling, explosion, contaminated ingestible product, spoiled pet food, child small part hazard, or batch invalid code can trigger with fewer but concrete reports."
+    },
+    {
+      "id": "STAGE1-04",
+      "name": "Content compliance",
+      "category": "red_flag",
+      "applies_to": [
+        "regulated",
+        "adult",
+        "drug",
+        "weapon",
+        "political",
+        "hate",
+        "gambling",
+        "illegal top-up"
+      ],
+      "cap_score": 2,
+      "text": "Red flag for explicit sexual content, vulgar edge content, cannabis/drug/tobacco, violence/gore, hate/discrimination, sensitive political content, prohibited or controlled goods, illegal recharge, gray-market transaction, gambling, or adult-platform codes."
+    },
+    {
+      "id": "STAGE1-05",
+      "name": "Commercial symbol and trade-dress risk",
+      "category": "red_flag",
+      "applies_to": [
+        "ip",
+        "brand",
+        "logo",
+        "sports",
+        "luxury",
+        "fragrance",
+        "sneaker",
+        "fashion",
+        "collectible"
+      ],
+      "cap_score": 2,
+      "text": "Do not downscore every IP or fan-style design. First identify whether the trade core is ordinary decoration/fan expression, secondary circulation, or official/authentic/authorized/limited/collectible identity. International big brands and strong genuine-market brands such as Nike, Adidas, Jordan, Gucci, LV, Chanel, Dior, YSL, Prada, Hermes, Rolex, major fragrances, luxury, sneakers, jerseys, and official gift cards are stricter: clear logo-like, monogram, packaging, bottle, shoe shape, bag shape, classic colorway, naming structure, or trade dress imitation can support score 2 even without explicit brand words."
+    },
+    {
+      "id": "IPR-01",
+      "name": "IPR authorization ladder",
+      "category": "red_flag",
+      "applies_to": [
+        "ipr_authorization_ladder",
+        "ipr",
+        "ip",
+        "licensed",
+        "official",
+        "authentic",
+        "brand"
+      ],
+      "text": "For products where an IP, brand, character, team badge, logo, or official identity is core to the transaction, use a three-step authorization ladder. Clear IPR risk without credible official authorization, especially with abnormal price, white-label evidence, weak seller proof, or strong imitation, usually scores 2. Suspected IPR found from world knowledge or visual similarity, but without abnormal price or strong impersonation proof, usually scores 3. A score above 3 requires credible official store, brand flagship, platform official tag, authorization, authentication, or equivalent proof."
+    },
+    {
+      "id": "IPR-02",
+      "name": "Unsupported official or licensed claim",
+      "category": "red_flag",
+      "applies_to": [
+        "unsupported_official_claim",
+        "official",
+        "licensed",
+        "authentic",
+        "genuine",
+        "authorized"
+      ],
+      "text": "If the PDP claims official, licensed, authentic, genuine, or authorized identity but the shop, brand field, platform official tag, or visible proof does not support that claim, do not treat the claim as positive evidence. Cap the score at 3 by default as suspected IPR or unsupported authenticity. Downgrade to 2 when abnormal price, strong visual imitation, weak white-label evidence, or strong official impersonation is also present."
+    },
+    {
+      "id": "RULECAP-01",
+      "name": "Red flag cap",
+      "category": "arbitration",
+      "applies_to": [
+        "all"
+      ],
+      "text": "If any Stage 1 red flag is established or compliance is 2 or below, final score must be 1 or 2. Use 1 for malicious, severe, or strongly proven harm; use 2 for weaker evidence, lighter harm, or clear risk without concentrated proof."
+    },
+    {
+      "id": "BRAND-02",
+      "name": "Official backing protection boundary",
+      "category": "arbitration",
+      "applies_to": [
+        "official_backing_protection_boundary",
+        "official",
+        "brand",
+        "authorized",
+        "channel"
+      ],
+      "text": "Official store, brand flagship, platform official tag, and strong brand-channel evidence can protect authenticity and delivery confidence. They do not override clear IPR risk, unsupported official claims, hard PDP claim conflicts, safety concerns, repeated core quality failures, or strong misleading evidence. Official backing can soften isolated logistics or preference complaints, but it does not justify score 5 when objective quality, fulfillment, safety, or claim-consistency risks remain unresolved."
+    },
+    {
+      "id": "SPECIAL-01",
+      "name": "Used, refurbished, open-box, defect disclosed",
+      "category": "special_overlay",
+      "applies_to": [
+        "used",
+        "refurbished",
+        "renewed",
+        "open box",
+        "damaged box",
+        "returned",
+        "minor defect"
+      ],
+      "text": "Transparent used/refurbished/open-box disclosure is not automatically low trust. Evaluate condition clarity, defect specifics, warranty/return/authentication/testing, real condition images, and whether price reflects condition. Hidden used/refurbished status or new-product imagery that misleads should reduce authenticity_delivery."
+    },
+    {
+      "id": "SPECIAL-02",
+      "name": "Trading cards and collectibles",
+      "category": "special_overlay",
+      "applies_to": [
+        "trading card",
+        "collectible card",
+        "tcg",
+        "sports card",
+        "pokemon",
+        "booster",
+        "random lot",
+        "repack",
+        "break spot"
+      ],
+      "text": "TCG/collectible cards are high trust sensitive but normal secondary circulation. Do not score 2 only because seller is non-official, no authorization text, single pack, random lot, resale, low review count, pulls bad, no hits, or random result dissatisfaction. Focus on unit clarity, series/language/version/sealed state/count/SKU, price, fake, resealed, tampered, wrong item, missing packs/cards, not as described, undisclosed proxy/reprint or repack."
+    },
+    {
+      "id": "SPECIAL-03",
+      "name": "Custom, handmade, personalized",
+      "category": "special_overlay",
+      "applies_to": [
+        "custom",
+        "personalized",
+        "handmade",
+        "made to order",
+        "engraved",
+        "monogrammed",
+        "diy",
+        "print on demand"
+      ],
+      "text": "Brand matters less. Page quality and reviews matter more. Evaluate customization rules, required user input, material, size, color, font, artwork range, delivery time, modification/cancel/return limits, and reviews about wrong customization or poor workmanship."
+    },
+    {
+      "id": "SPECIAL-04",
+      "name": "Perishable, shelf-life, liquid, leak-prone",
+      "category": "special_overlay",
+      "applies_to": [
+        "food",
+        "wine",
+        "pet food",
+        "supplement",
+        "flower",
+        "liquid beauty",
+        "liquid cleaner",
+        "leak",
+        "expiration"
+      ],
+      "text": "Check expiry, storage, seal, capacity/count/batch, leakage, breakage, spoilage, odor, contamination, expired goods, melting, and whether long-distance shipping is credible."
+    },
+    {
+      "id": "SPECIAL-05",
+      "name": "Regulated or age-restricted",
+      "category": "special_overlay",
+      "applies_to": [
+        "alcohol",
+        "adult",
+        "knife",
+        "weapon",
+        "medical claim",
+        "drug",
+        "cannabis",
+        "tobacco",
+        "chemical"
+      ],
+      "text": "Check compliance and recommendability first. Medicalized or drug-like claims, missing warnings/restrictions, controlled or dangerous use, edge content, and illegal goods can cap score even if quality looks good."
+    },
+    {
+      "id": "SPECIAL-06",
+      "name": "Digital cards and redeemable codes",
+      "category": "special_overlay",
+      "applies_to": [
+        "digital gift card",
+        "egift",
+        "pin code",
+        "redeem code",
+        "top up",
+        "game credit",
+        "platform credit",
+        "subscription code",
+        "voucher"
+      ],
+      "text": "Digital cards/codes are near Level 1. Do not punish only because non-physical. Evaluate official/authorized channel, delivery method, region, currency, face value, expiry, redemption steps, restrictions, refund policy, and reviews proving works/redeemed/sent quickly or negative invalid/already redeemed/never received/scam/no refund. Abnormally below face value without credible explanation is risk, not value."
+    },
+    {
+      "id": "REVIEWS-01",
+      "name": "Review sample size",
+      "category": "review_logic",
+      "applies_to": [
+        "reviews"
+      ],
+      "text": "0 reviews are not automatic negative. For 1 to 9 reviews, read all visible comments and do not use p10/p50 mechanically. Less than 10 reviews and only one ordinary complaint usually lowers to 3-lower, not 2. More than 3 reviews in a tiny sample pointing to the same hard issue can support 2, especially Level 1 or 2. At 100+ reviews, low or near-p10 rating plus repeated core complaints is stable negative evidence."
+    },
+    {
+      "id": "REVIEWS-02",
+      "name": "Category rating p10 and p50",
+      "category": "review_logic",
+      "applies_to": [
+        "reviews",
+        "category_rating_p10",
+        "category_rating_p50"
+      ],
+      "text": "Use provided category p10/p50 if available; otherwise use broad category calibration. Below p10 is very weak, near p10 is cautious, p10 to p50 is ordinary weak, near p50 is neutral, clearly above p50 is positive but cannot override red flags. For big brand plus official/authorized channel and review_count under 100, low p10 alone should not mechanically force 2 without concentrated core complaints."
+    },
+    {
+      "id": "REVIEW-05",
+      "name": "Review volume and score 5 gate",
+      "category": "review_logic",
+      "applies_to": [
+        "score_5_candidate",
+        "score_5_blocker",
+        "review_volume_absorbs_limited_negatives",
+        "recent_review_contents"
+      ],
+      "text": "Large sales and review volume can absorb limited quality or fulfillment negatives when they are isolated, subjective, or logistics-only and do not show widespread objective defects. Score 5 is allowed when avg_review_star_td and avg_star_rating are both at least 4.6 and review_contents shows no clear objective negative review, safety issue, IPR or authorization issue, hard claim conflict, or unstable fulfillment evidence. Subjective preference, color, taste, fit, expectation, or isolated logistics comments should not block score 5 by themselves."
+    },
+    {
+      "id": "REVIEW-06",
+      "name": "Sparse review objective issue cap",
+      "category": "review_logic",
+      "applies_to": [
+        "sparse_review_objective_issue_cap",
+        "reviews",
+        "quality",
+        "fulfillment"
+      ],
+      "text": "When review evidence is sparse, a few objective quality, fulfillment, missing-part, leaking, wrong-item, core-function, or safety complaints carry more weight than they would in a large stable review base. Sparse evidence plus objective product or fulfillment problems usually caps the final score at 3 unless strong official/channel/page evidence clearly shows the issue is isolated and low impact."
+    },
+    {
+      "id": "VALUE-01",
+      "name": "Landed price",
+      "category": "value",
+      "applies_to": [
+        "price",
+        "shipping"
+      ],
+      "text": "Use localized landed cost equal product price plus shipping fee after converting USD input prices into the target_country currency. UK uses GBP; DE, FR, ES, and IT use EUR. Cheap cannot rescue fake, unsafe, scam, wrong-item, invalid code, or severe quality failure. High price can be trusted if brand/channel/quality support it; white-label high price needs evidence. Shipping pain depends on item size, weight, price share, local buyer expectations, and whether it destroys the apparent deal. Converted prices support coarse value judgment and are not exact local market-price proof."
+    },
+    {
+      "id": "VALUE-02",
+      "name": "Abnormal low price",
+      "category": "value",
+      "applies_to": [
+        "price"
+      ],
+      "text": "Abnormal low price is risk for Level 1/2, strong genuine-market brands, digital cards below face value, or high-value products with vague specs. Level 4/5 can be cheap without scam if size/count/use/material are clear."
+    },
+    {
+      "id": "BOUNDARY-01",
+      "name": "Core claim conflicts with review evidence",
+      "category": "boundary_calibration",
+      "applies_to": [
+        "claim_review_conflict",
+        "misleading",
+        "reviews",
+        "power",
+        "charger",
+        "electronics"
+      ],
+      "text": "If title, main image, or detail images emphasize a core purchase promise such as heavy-duty load, high capacity, fast charging, multilingual translation, waterproofing, strong suction, or large count, but review evidence directly says that promise is unstable, unreliable, below claim, not secure, missing, or contradicted, do not keep score 4. Usually reduce score by 1, reduce authenticity_delivery and quality, and use misleading/wrong-item or quality B-end reasons when score is below 4. For power, child, ingestible, or body-contact categories, this usually caps final score at 3 unless the conflict is clearly isolated."
+    },
+    {
+      "id": "BOUNDARY-02",
+      "name": "Visible spec or description inconsistency",
+      "category": "boundary_calibration",
+      "applies_to": [
+        "page_spec_conflict",
+        "page_quality",
+        "misleading"
+      ],
+      "text": "When title, main image, detail image, and description conflict on quantity, servings, capacity, pads, pieces, battery size, power, material, compatibility, or included accessories, first lower page_quality. If the conflict affects what the buyer receives or a core spec, also lower authenticity_delivery. Do not automatically trigger a Stage 1 red flag from a single internal inconsistency; low-risk goods usually sit at 3 to 4, while food, electronics, battery, child, or body-contact goods with core-spec conflict usually cannot exceed 3."
+    },
+    {
+      "id": "BOUNDARY-03",
+      "name": "Child-use safety cap",
+      "category": "boundary_calibration",
+      "applies_to": [
+        "child_safety",
+        "baby",
+        "child",
+        "kids",
+        "safety"
+      ],
+      "text": "For products clearly intended for children, safety evidence about protective structures must be weighted more heavily than ordinary quality complaints. If reviews report safety net, zip, spring cover, padding, straps, frame, stability, or locking parts are insecure, loose, unpadded, unstable, or do not stay secured, lower safety. If safety is 2, final score cannot exceed 3. Do not give score 4 unless the safety complaint is clearly isolated misuse and the protective function remains credible."
+    },
+    {
+      "id": "BOUNDARY-04",
+      "name": "Food and ingestible packaging risk",
+      "category": "boundary_calibration",
+      "applies_to": [
+        "food_packaging_risk",
+        "food",
+        "supplement",
+        "ingestible",
+        "perishable"
+      ],
+      "text": "For food, drinks, supplements, candy, protein, and other ingestibles, packaging problems can affect usability and safety, not just fulfillment. Reviews mentioning opened, leaking, broken seal, burst, contaminated, spoiled, replacement needed, or packaging arriving damaged should lower quality and possibly safety. If the issue affects edibility or buyer trust in food safety, final score usually cannot exceed 3; if it is only minor outer-box damage with intact inner packaging, treat it as fulfillment/page weakness instead of a hard red flag."
+    },
+    {
+      "id": "BOUNDARY-05",
+      "name": "Body-contact harm nuance",
+      "category": "boundary_calibration",
+      "applies_to": [
+        "body_harm",
+        "beauty",
+        "personal care",
+        "health",
+        "safety",
+        "clear_bodily_harm_hard_cap"
+      ],
+      "text": "For beauty, skincare, lash, hair, intimate, health, and body-contact goods, distinguish inherent disclosed reaction from avoidable product failure. Mild redness, irritation, or allergy that is a known inherent reaction and appears limited may lower safety or quality slightly while still allowing score 4 when other evidence is strong. When PDP or review evidence shows clear bodily harm to the user from avoidable product failure, such as burns, scalds, electric shock, overheating, leaking chemicals, unsafe applicators, structural failure, eye injury, stye, or comparable direct harm, the final score must not exceed 3. Concentrated injury complaints can support score 2."
+    },
+    {
+      "id": "BOUNDARY-06",
+      "name": "Zero price data pollution",
+      "category": "boundary_calibration",
+      "applies_to": [
+        "zero_price",
+        "price"
+      ],
+      "text": "If sales_price is 0, null-like, or obviously an invalid imported price for a normal PDP, treat price as missing data rather than as strong value or low-price bait. Set value around neutral 3 unless other price evidence exists. Do not output abnormal-low-price B-end reason from sales_price=0 alone. Let score be decided by trust, page, reviews, category, safety, and compliance."
+    },
+    {
+      "id": "BOUNDARY-07",
+      "name": "Auction or bidding listing exclusion",
+      "category": "boundary_calibration",
+      "applies_to": [
+        "auction_listing",
+        "auction",
+        "bid"
+      ],
+      "text": "If the listing is an auction or bidding format rather than a fixed-price PDP, for example auction, bid, no cancellations, hammer icon, or price=0 paired with auction language, do not apply the normal PDP Trust Score as if it were a standard product. Mark it as not comparable in reasoning and avoid using price/value rules. If the output schema forces a 1-5 score, explain the exclusion and keep it out of accuracy calibration downstream."
+    },
+    {
+      "id": "BOUNDARY-08",
+      "name": "Recent rating negative-only calibration",
+      "category": "boundary_calibration",
+      "applies_to": [
+        "recent_rating_downshift",
+        "recent_review_contents",
+        "review_contents"
+      ],
+      "text": "Use avg_review_star_td as the primary historical/cumulative review rating because both the model and user can see it as the main long-run trust signal. avg_star_rating is the average star score of the latest 10 reviews and is used only for negative calibration: if it is meaningfully lower than avg_review_star_td, treat it as recent deterioration and consider downgrading quality or final score when review_contents supports objective product, fulfillment, safety, or PDP-claim problems. review_contents contains the latest 10 buyer comments and belongs primarily to quality reliability. If avg_star_rating is higher than avg_review_star_td, do not upgrade score or override the historical rating; mention it only as limited recent positive evidence that cannot erase the cumulative signal. Do not penalize missing review_contents by itself."
+    },
+    {
+      "id": "BOUNDARY-09",
+      "name": "Hard misleading and core information conflict cap",
+      "category": "boundary_calibration",
+      "applies_to": [
+        "hard_claim_spec_conflict",
+        "hard_misleading_conflict",
+        "page_spec_conflict",
+        "refurbished",
+        "oral care",
+        "beauty",
+        "food",
+        "child_safety"
+      ],
+      "text": "Clear core-claim or core-information conflict can override positive social proof. If the mismatch affects what the buyer receives, refurbished or repaired condition, quantity, volume, core ingredients, tooth-whitening or body-contact safety disclosure, child or powered-product safety, or food/supplement trust, cap at 3 and consider score 2 when the conflict is obvious, severe, or paired with weak rating or weak channel proof."
+    },
+    {
+      "id": "BEND-01",
+      "name": "B-end reason selection",
+      "category": "output",
+      "applies_to": [
+        "all"
+      ],
+      "text": "Only output b_end_reasons when score is below 4 and a clear actionable main cause exists. Use at most 3 reasons, exactly from allowed_b_end_reasons. Do not output a reason only for unknown brand, empty brand_name, no reviews, ordinary white label, no backend data, polished images, no price anchor, a single ordinary complaint under 10 reviews, non-physical digital nature, or ordinary fan/pop-culture design without official/authentic impersonation."
+    },
+    {
+      "id": "OUTPUT-01",
+      "name": "Output contract",
+      "category": "output",
+      "applies_to": [
+        "all"
+      ],
+      "text": "Final machine JSON must contain only integer 1 to 5 fields authenticity_delivery, safety, quality, value, compliance, page_quality, score, and optional b_end_reasons. Do not output category_sensitivity_level, special_overlay, red_flag_status, severity, confidence, or action_type."
+    }
+  ],
+  "routing_hints": {
+    "level_1_keywords": [
+      "food",
+      "supplement",
+      "vitamin",
+      "protein",
+      "health",
+      "baby",
+      "pet food",
+      "battery",
+      "power bank",
+      "charger",
+      "outlet",
+      "phone",
+      "computer",
+      "luxury",
+      "sneaker",
+      "jersey",
+      "collectible",
+      "trading card",
+      "gift card",
+      "redeem code",
+      "top up",
+      "voucher"
+    ],
+    "level_2_keywords": [
+      "beauty",
+      "personal care",
+      "fragrance",
+      "perfume",
+      "hair care",
+      "beauty tool",
+      "hair dryer",
+      "curling iron",
+      "straightener",
+      "vacuum",
+      "small appliance",
+      "child toy",
+      "protector",
+      "fitness",
+      "massager"
+    ],
+    "level_4_5_keywords": [
+      "phone case",
+      "sticker",
+      "keychain",
+      "party",
+      "holiday",
+      "decoration",
+      "gift bag",
+      "wrapping",
+      "novelty",
+      "hair clip",
+      "low-risk accessory"
+    ],
+    "digital_keywords": [
+      "egift",
+      "gift card",
+      "digital card",
+      "pin code",
+      "redeem code",
+      "top-up",
+      "top up",
+      "game credit",
+      "platform credit",
+      "subscription code",
+      "voucher"
+    ],
+    "tcg_keywords": [
+      "trading card",
+      "collectible card",
+      "tcg",
+      "sports card",
+      "pokemon",
+      "booster",
+      "random lot",
+      "repack",
+      "break spot",
+      "single card"
+    ],
+    "used_keywords": [
+      "used",
+      "pre-owned",
+      "refurbished",
+      "renewed",
+      "open-box",
+      "open box",
+      "damaged box",
+      "display item",
+      "returned",
+      "minor defect"
+    ],
+    "custom_keywords": [
+      "custom",
+      "personalized",
+      "handmade",
+      "made-to-order",
+      "made to order",
+      "engraved",
+      "monogrammed",
+      "diy",
+      "print-on-demand"
+    ],
+    "regulated_keywords": [
+      "alcohol",
+      "adult",
+      "knife",
+      "weapon",
+      "medical",
+      "drug",
+      "cannabis",
+      "tobacco",
+      "chemical"
+    ],
+    "big_brand_keywords": [
+      "nike",
+      "adidas",
+      "jordan",
+      "gucci",
+      "louis vuitton",
+      "lv",
+      "chanel",
+      "dior",
+      "ysl",
+      "prada",
+      "hermes",
+      "hermès",
+      "rolex",
+      "le labo",
+      "luxury",
+      "sneaker",
+      "jersey",
+      "fragrance",
+      "perfume"
+    ]
+  }
+}
