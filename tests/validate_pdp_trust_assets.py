@@ -92,6 +92,14 @@ ALLOWED_B_END_REASONS = [
 ]
 
 
+def load_code_node(rel_path):
+    code_path = ROOT / rel_path
+    namespace = {"Args": object, "Output": dict}
+    source = code_path.read_text()
+    exec(compile(source, str(code_path), "exec"), namespace)
+    return namespace
+
+
 def test_required_files_exist():
     missing = [path for path in REQUIRED_FILES if not (ROOT / path).exists()]
     assert not missing, f"missing required files: {missing}"
@@ -377,6 +385,74 @@ def test_final_data_cleaning_code_node_parses_and_maps_rpc_images():
     assert "first_image" not in output
     for forbidden in FORBIDDEN_INPUT_FIELDS:
         assert forbidden not in output
+
+
+def test_final_data_cleaning_preserves_all_product_main_images():
+    namespace = load_code_node("code_nodes/final_data_cleaning_pdp_trust_v1.py")
+    payload = {
+        "output": {
+            "BaseResp": {"StatusCode": 0, "StatusMessage": ""},
+            "result": {
+                "ProductMeta.images": {
+                    "feature_code": "ProductMeta.images",
+                    "feature_type": "Array",
+                    "feature_value": json.dumps(["https://example.com/main-1.jpeg", "https://example.com/main-2.jpeg", "https://example.com/detail-long.jpeg"]),
+                }
+            },
+        }
+    }
+    output = namespace["build_output"]({"product_id": "all-images-case", "product_name": "All Image Case", "target_country": "UK", "rpc_images": payload})
+    assert output["product_main_images"] == ["https://example.com/main-1.jpeg", "https://example.com/main-2.jpeg", "https://example.com/detail-long.jpeg"]
+    assert output["images"][:3] == output["product_main_images"]
+    assert "product_main_images_count=3" in output["image_manifest"]
+    assert "first image only" not in output["final_data_cleaning_debug"].lower()
+
+
+def test_final_data_cleaning_parses_product_extra_attributes_rpc():
+    namespace = load_code_node("code_nodes/final_data_cleaning_pdp_trust_v1.py")
+    payload = {
+        "output": {
+            "BaseResp": {"StatusCode": 0, "StatusMessage": ""},
+            "result": {
+                "product_extra_attributes.product_attributes": {
+                    "feature_code": "product_extra_attributes.product_attributes",
+                    "feature_type": "Array",
+                    "feature_value": json.dumps([
+                        {"label": "Pattern", "value": "Plain"},
+                        {"label": "Season", "value": "All Seasons"},
+                        {"label": "Style", "value": "Casual"},
+                        {"label": "Stretch", "value": "Slight Stretch"},
+                        {"label": "Washing instructions", "value": "Machine wash, do not dry clean"},
+                        {"label": "Material", "value": "Strong polyester single jersey"},
+                        {"label": "Composition", "value": "Polyester 95%Elastane 5%"},
+                        {"label": "Weaving method", "value": "Knit Fabric"},
+                        {"label": "Sensitive goods type", "value": "Ordinary Goods"},
+                        {"label": "Batch number", "value": "AW2026-09"},
+                    ]),
+                },
+                "product_extra_attributes.size_chart": {
+                    "feature_code": "product_extra_attributes.size_chart",
+                    "feature_type": "Array",
+                    "feature_value": json.dumps(["https://example.com/size-chart.jpeg"]),
+                },
+            },
+        }
+    }
+    output = namespace["build_output"](
+        {
+            "product_id": "extra-attributes-case",
+            "product_name": "Extra Attributes Case",
+            "target_country": "DE",
+            "product_extra_attributes": payload,
+        }
+    )
+    assert output["size_chart_images"] == ["https://example.com/size-chart.jpeg"]
+    assert "Pattern=Plain" in output["product_attributes_text"]
+    assert "Material=Strong polyester single jersey" in output["product_attributes_text"]
+    assert "Composition=Polyester 95%Elastane 5%" in output["product_attributes_text"]
+    assert '"label": "Pattern"' in output["product_attributes_json"]
+    assert "product_attributes=yes" in output["extra_attributes_source"]
+    assert "size_chart_images_count=1" in output["image_manifest"]
 
 
 def test_context_builder_code_node_builds_single_llm_status_fields():
