@@ -129,7 +129,7 @@ def build_case_state(params, images):
         f"avg_review_star_td={get_text(params, 'avg_review_star_td') or 'missing'}",
         f"avg_star_rating={get_text(params, 'avg_star_rating') or 'missing'}",
         f"images_count={len(images)}",
-        f"image_order=images[0] is RPC main image when available; images[1+] are PDP detail images",
+        f"image_sources=product_main_images and size_chart_images are separate source lists when provided; images is the combined visual list",
     ]
     return "\n".join(parts)
 
@@ -177,8 +177,8 @@ def build_decision_checklist(params, images):
         "1. Start from category sensitivity and special overlays; do not average the six dimensions.",
         "2. Use rules_context as high-priority guidance and body as fallback rulebook.",
         "3. Use evidence_manifest to avoid missing image count, review text, price, shipping, and evidence gaps.",
-        "4. Use target-country language and value context: role, primary language, tolerated EU languages, localized GBP/EUR landed cost, returns/warranty, plug/voltage, compatibility, and digital redemption region.",
-        "5. Visible image/text consistency: compare title, main image, detail images, quantity, capacity, free shipping, promotion, included items, and core specs.",
+        "4. Use target-country language and value context: role, strict primary-language rule, localized GBP/EUR landed cost, returns/warranty, plug/voltage, compatibility, and digital redemption region.",
+        "5. Visible image/text consistency: compare title, product_main_images, size_chart_images, detail images, quantity, capacity, free shipping, promotion, included items, and core specs.",
         "6. Review calibration: avg_review_star_td is the primary historical rating; avg_star_rating only supports negative recent downshift, not upgrade.",
         "7. Score 5 gate: require strong trust, clear PDP, healthy reviews, no objective review problem, no safety/IPR/authorization/core-claim/fulfillment instability.",
         "8. Safety hard caps: child-use, powered, battery, heating, eye-contact, ingestible, and body-contact risks need explicit safety consistency checking.",

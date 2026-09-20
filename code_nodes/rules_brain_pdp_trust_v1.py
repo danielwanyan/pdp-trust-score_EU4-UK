@@ -19,9 +19,9 @@ ALLOWED_B_END_REASONS = [
 
 def minimal_fallback_rules():
     return {
-        "project": "pdp-trust-score",
-        "version": "2026-08-06-v2-fallback",
-        "locale": "dynamic_target_country",
+        "project": "pdp-trust-score_EU4-UK",
+        "version": "2026-09-20-vnext-fallback",
+        "locale": "merged_uk_eu4_target_country",
         "exchange_rate_baseline": {
             "source": "Frankfurter API",
             "date": "2026-08-14",
@@ -32,41 +32,46 @@ def minimal_fallback_rules():
             "UK": {
                 "buyer_persona": "British TikTok Shop shopper",
                 "primary_language": "English",
-                "tolerated_languages": ["English", "German", "French", "Spanish", "Italian", "other European languages"],
+                "tolerated_languages": ["English"],
                 "target_currency": "GBP",
-                "language_tolerance": "English is the clearest target-market language; other European languages are tolerated unless core information becomes unclear.",
-                "value_judgment": "Use localized GBP landed cost converted from USD for coarse UK buyer value reasoning.",
+                "strict_language_rule": "Strict UK localization: core PDP info in non-target primary language without target-language translation means page_quality <= 3.",
+                "language_tolerance": "Only brand names, model names, international measurement units, and non-critical decorative text may remain outside English without penalty. Core purchase info must be available in English or page_quality <= 3.",
+                "value_judgment": "Use native GBP landed cost for coarse UK buyer value reasoning.",
             },
             "DE": {
                 "buyer_persona": "German TikTok Shop shopper",
                 "primary_language": "German",
-                "tolerated_languages": ["German", "English", "French", "Spanish", "Italian", "other European languages"],
+                "tolerated_languages": ["German"],
                 "target_currency": "EUR",
-                "language_tolerance": "German is the clearest target-market language; other European languages are tolerated unless core information becomes unclear.",
+                "strict_language_rule": "Strict DE localization: core PDP info in non-target primary language without target-language translation means page_quality <= 3.",
+                "language_tolerance": "Only brand names, model names, international measurement units, and non-critical decorative text may remain outside German without penalty. Core purchase info must be available in German or page_quality <= 3.",
                 "value_judgment": "Use localized EUR landed cost converted from USD for coarse German buyer value reasoning.",
             },
             "FR": {
                 "buyer_persona": "French TikTok Shop shopper",
                 "primary_language": "French",
-                "tolerated_languages": ["French", "English", "German", "Spanish", "Italian", "other European languages"],
+                "tolerated_languages": ["French"],
                 "target_currency": "EUR",
-                "language_tolerance": "French is the clearest target-market language; other European languages are tolerated unless core information becomes unclear.",
+                "strict_language_rule": "Strict FR localization: core PDP info in non-target primary language without target-language translation means page_quality <= 3.",
+                "language_tolerance": "Only brand names, model names, international measurement units, and non-critical decorative text may remain outside French without penalty. Core purchase info must be available in French or page_quality <= 3.",
                 "value_judgment": "Use localized EUR landed cost converted from USD for coarse French buyer value reasoning.",
             },
             "ES": {
                 "buyer_persona": "Spanish TikTok Shop shopper",
                 "primary_language": "Spanish",
-                "tolerated_languages": ["Spanish", "English", "German", "French", "Italian", "other European languages"],
+                "tolerated_languages": ["Spanish"],
                 "target_currency": "EUR",
-                "language_tolerance": "Spanish is the clearest target-market language; other European languages are tolerated unless core information becomes unclear.",
+                "strict_language_rule": "Strict ES localization: core PDP info in non-target primary language without target-language translation means page_quality <= 3.",
+                "language_tolerance": "Only brand names, model names, international measurement units, and non-critical decorative text may remain outside Spanish without penalty. Core purchase info must be available in Spanish or page_quality <= 3.",
                 "value_judgment": "Use localized EUR landed cost converted from USD for coarse Spanish buyer value reasoning.",
             },
             "IT": {
                 "buyer_persona": "Italian TikTok Shop shopper",
                 "primary_language": "Italian",
-                "tolerated_languages": ["Italian", "English", "German", "French", "Spanish", "other European languages"],
+                "tolerated_languages": ["Italian"],
                 "target_currency": "EUR",
-                "language_tolerance": "Italian is the clearest target-market language; other European languages are tolerated unless core information becomes unclear.",
+                "strict_language_rule": "Strict IT localization: core PDP info in non-target primary language without target-language translation means page_quality <= 3.",
+                "language_tolerance": "Only brand names, model names, international measurement units, and non-critical decorative text may remain outside Italian without penalty. Core purchase info must be available in Italian or page_quality <= 3.",
                 "value_judgment": "Use localized EUR landed cost converted from USD for coarse Italian buyer value reasoning.",
             },
         },
@@ -928,7 +933,7 @@ def infer_price_warning(pdp, tags):
     if pdp.get("localized_price_context"):
         parts.append(pdp.get("localized_price_context"))
     elif pdp.get("currency") == "USD" or pdp.get("price"):
-        parts.append("sales_price is USD; convert to target_country currency through Final_data_cleaning before value reasoning")
+        parts.append("price_input_semantics missing; use Final_data_cleaning localized_price_context when available; UK prices are native GBP, DE/FR/ES/IT prices are USD converted to EUR")
     if "shipping_claim_mismatch" in tags:
         parts.append("shipping_fee conflicts with free shipping claim in title or PDP text; lower page_quality and consider authenticity_delivery/fulfillment risk")
     if list_price is not None and price is not None and list_price > 0:
@@ -976,9 +981,10 @@ def build_locale_context(rules, pdp):
             f"exchange_rate_date={exchange.get('date', pdp.get('exchange_rate_date', ''))}",
             f"exchange_rate_to_target_currency={pdp.get('exchange_rate_to_target_currency', '')}",
             f"localized_price_context={localized_price}",
+            f"strict_language_rule={profile.get('strict_language_rule', '')}",
             f"language_tolerance={profile.get('language_tolerance', '')}",
             f"value_judgment={profile.get('value_judgment', '')}",
-            "target-country language fairness: non-local EU language is not negative by itself; penalize only when the target-country buyer cannot understand core specs, safety, warranty, return, compatibility, expiry, or digital redemption restrictions.",
+            "target-country strict language rule: core PDP info in non-target primary language without target-language translation means page_quality <= 3; only brand names, model names, international measurement units, and non-critical decorative text may remain outside the primary language without penalty.",
         ]
     )
 
@@ -1127,8 +1133,8 @@ def build_rules_context(rules, pdp, selected_rules, tags, warning):
     lines.append("Safety and compliance default to 5 and only go down when evidence triggers them.")
     lines.append("Do not punish unknown brand, empty brand_name, no reviews, ordinary white label, polished images, no backend data, or no price anchor by themselves.")
     lines.append("Machine JSON must only contain authenticity_delivery, safety, quality, value, compliance, page_quality, score, and optional b_end_reasons.")
-    lines.append("Use locale_context for target-country role, language tolerance, and localized GBP/EUR value reasoning.")
-    lines.append("Apply target-country language fairness: non-local EU language is tolerated unless core purchase, safety, warranty, return, compatibility, expiry, or digital redemption information is not understandable for the target-country buyer.")
+    lines.append("Use locale_context for target-country role, strict primary-language rule, and localized GBP/EUR value reasoning.")
+    lines.append("Apply target-country strict language rule: core PDP info in non-target primary language without target-language translation means page_quality <= 3; only brand names, model names, international measurement units, and non-critical decorative text may remain outside the primary language without penalty.")
     if warning:
         lines.append(f"rules_warning: {warning}")
     lines.append("")

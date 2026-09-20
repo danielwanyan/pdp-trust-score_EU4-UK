@@ -168,6 +168,135 @@ def test_rulebook_contains_strict_localization_and_new_product_rules():
         assert expected in combined
 
 
+def test_merged_vnext_rules_reject_language_price_and_new_product_contradictions():
+    structured = json.loads((ROOT / "rules/pdp_trust_rules_structured_v1.json").read_text())
+    structured_text = (ROOT / "rules/pdp_trust_rules_structured_v1.json").read_text()
+    compressed_text = (ROOT / "rules/pdp_trust_rules_compressed_v1.txt").read_text()
+    system_text = (ROOT / "prompts/trust_evaluator_system_prompt_v1.txt").read_text()
+    user_text = (ROOT / "prompts/trust_evaluator_user_prompt_v1.txt").read_text()
+    rules_brain_source = (ROOT / "code_nodes/rules_brain_pdp_trust_v1.py").read_text()
+    combined_rulebook = structured_text + "\n" + compressed_text
+    combined_rulebook_and_prompt = combined_rulebook + "\n" + system_text + "\n" + user_text
+    combined_active_assets = combined_rulebook_and_prompt + "\n" + rules_brain_source
+
+    assert "Non-local language is not a negative signal by itself" not in combined_rulebook_and_prompt
+    assert "or a tolerated language" not in combined_rulebook_and_prompt
+    assert "or a clearly tolerated language" not in combined_rulebook_and_prompt
+    assert "after converting USD input prices into the target_country currency" not in combined_rulebook
+    assert "sales_price is USD; convert to target_country currency" not in combined_active_assets
+
+    for target_country, profile in structured["locale_profiles"].items():
+        tolerated_languages = profile.get("tolerated_languages", [])
+        assert tolerated_languages in ([], [profile["primary_language"]]), target_country
+        strict_language_rule = profile.get("strict_language_rule", "")
+        assert "core PDP info in non-target primary language without target-language translation means page_quality <= 3" in strict_language_rule
+        assert "tolerated language" not in strict_language_rule
+        language_tolerance = profile.get("language_tolerance", "")
+        assert "Only brand names, model names, international measurement units, and non-critical decorative text" in language_tolerance
+        assert "Core purchase info must be available" in language_tolerance
+
+    new_rules_text = "\n".join(
+        rule["text"] for rule in structured["rules"] if rule["id"] in {"NEW-01", "NEW-02"}
+    )
+    for expected in [
+        "does not override safety",
+        "compliance",
+        "Stage 1 red flags",
+        "IPR/authorization risk",
+        "misleading/wrong-item evidence",
+        "visible product/spec conflict",
+        "negative review_contents",
+    ]:
+        assert expected in new_rules_text
+
+
+def test_merged_vnext_localize_and_new_rule_responsibilities():
+    structured = json.loads((ROOT / "rules/pdp_trust_rules_structured_v1.json").read_text())
+    rules_by_id = {rule["id"]: rule for rule in structured["rules"]}
+
+    localize_01 = rules_by_id["LOCALIZE-01"]
+    assert localize_01["name"] == "Strict target-country language cap"
+    assert "all" in localize_01["applies_to"]
+    for expected in [
+        "title",
+        "product_main_images",
+        "size_chart_images",
+        "product_desc",
+        "product_attributes_text",
+        "page_quality <= 3",
+    ]:
+        assert expected in localize_01["text"]
+
+    localize_02 = rules_by_id["LOCALIZE-02"]
+    assert localize_02["name"] == "Long-image description localization"
+    assert "all" in localize_02["applies_to"]
+    for expected in [
+        "product_main_images",
+        "long-image descriptions",
+        "product_desc empty",
+        "non-localized long-image",
+        "page_quality <= 3",
+    ]:
+        assert expected in localize_02["text"]
+
+    localize_03 = rules_by_id["LOCALIZE-03"]
+    assert localize_03["name"] == "Size chart localization"
+    assert "all" in localize_03["applies_to"]
+    assert "size_chart_images" in localize_03["text"]
+    assert "page_quality <= 3" in localize_03["text"]
+    assert "price_input_semantics" not in localize_03["text"]
+    assert "sales_price" not in localize_03["text"]
+
+    value_01 = rules_by_id["VALUE-01"]
+    for expected in [
+        "UK sales_price and shipping_fee are native GBP and are not converted",
+        "DE, FR, ES, and IT sales_price and shipping_fee are USD inputs converted to EUR",
+        "list_price_usd is an anchor only",
+    ]:
+        assert expected in value_01["text"]
+
+    new_rule_text = "\n".join(rules_by_id[rule_id]["text"] for rule_id in ["NEW-01", "NEW-02"])
+    for expected in [
+        "do not mechanically lower quality because product sales/reviews are sparse",
+        "reduce product review history weight",
+        "shop_sales/shop_fans/shop_final_score/page/attributes/images",
+        "no historical sales/reviews with neutral evidence can default quality to 4, not mechanically 3",
+        "does not override safety, compliance, Stage 1 red flags, IPR/authorization risk, misleading/wrong-item evidence, visible product/spec conflict, or negative review_contents",
+    ]:
+        assert expected in new_rule_text
+
+
+def test_rules_brain_locale_context_uses_strict_primary_language_rule():
+    namespace = load_code_node("code_nodes/rules_brain_pdp_trust_v1.py")
+    structured = json.loads((ROOT / "rules/pdp_trust_rules_structured_v1.json").read_text())
+    locale_context = namespace["build_locale_context"](
+        structured,
+        {
+            "target_country": "DE",
+            "localized_price_context": "sales_price=100.00 USD -> 86.45 EUR",
+            "exchange_rate_to_target_currency": "0.86453",
+        },
+    )
+    output = namespace["build_output"](
+        {
+            "rules_json": structured,
+            "product_id": "strict-locale-case",
+            "product_name": "Strict Locale Case",
+            "target_country": "DE",
+            "localized_price_context": "sales_price=100.00 USD -> 86.45 EUR",
+            "exchange_rate_to_target_currency": "0.86453",
+        }
+    )
+
+    assert "non-local EU language is tolerated" not in locale_context
+    assert "Non-local language is not a negative signal by itself" not in locale_context
+    assert "core PDP info in non-target primary language without target-language translation means page_quality <= 3" in locale_context
+    assert "non-local EU language is tolerated" not in output["rules_context"]
+    assert "core PDP info in non-target primary language without target-language translation means page_quality <= 3" in output["rules_context"]
+    for rule_id in ["LOCALIZE-01", "LOCALIZE-02", "LOCALIZE-03", "NEW-01", "NEW-02"]:
+        assert rule_id in output["rules_context"]
+
+
 def test_prompts_include_new_visual_attribute_and_new_product_inputs():
     system_text = (ROOT / "prompts/trust_evaluator_system_prompt_v1.txt").read_text()
     user_text = (ROOT / "prompts/trust_evaluator_user_prompt_v1.txt").read_text()
@@ -181,6 +310,7 @@ def test_prompts_include_new_visual_attribute_and_new_product_inputs():
         "{{is_new_product_30d}}",
         "{{new_product_context}}",
         "{{visual_evidence_context}}",
+        "{{review_cnt_td}}",
         "page_quality <= 3",
         "主图",
         "尺码图",
@@ -189,6 +319,22 @@ def test_prompts_include_new_visual_attribute_and_new_product_inputs():
         "3 分不是普通中性分",
     ]:
         assert expected in combined
+
+
+def test_active_prompt_and_context_builder_use_separated_image_sources():
+    user_text = (ROOT / "prompts/trust_evaluator_user_prompt_v1.txt").read_text()
+    context_builder_source = (ROOT / "code_nodes/context_builder_pdp_trust_v1.py").read_text()
+    combined = user_text + "\n" + context_builder_source
+
+    for stale in [
+        "images[0] is RPC main image",
+        "images[1+] are PDP detail images",
+        "tolerated EU languages",
+    ]:
+        assert stale not in combined
+    assert "product_main_images" in combined
+    assert "size_chart_images" in combined
+    assert "strict primary-language rule" in combined
 
 
 def test_system_prompts_are_aicolate_safe_plain_text():
@@ -240,7 +386,8 @@ def test_trust_evaluator_prompts_harden_safety_value_visual_consistency():
     assert "safety must not remain 5" in combined
     assert "value=5 requires" in combined
     assert "Visible image/text consistency check" in combined
-    assert "sales_price is USD" in combined
+    assert "Do not assume sales_price is USD for every country" in combined
+    assert "price_input_semantics" in combined
     assert "free shipping" in combined
     assert "buy one get one" in combined
 

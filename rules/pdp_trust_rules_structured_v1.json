@@ -1,8 +1,8 @@
 {
-  "project": "pdp-trust-score",
-  "version": "2026-08-06-v2",
-  "locale": "dynamic_target_country",
-  "goal": "Score TikTok Shop PDP purchase trust from the viewpoint of the local TikTok Shop buyer indicated by target_country.",
+  "project": "pdp-trust-score_EU4-UK",
+  "version": "2026-09-20-vnext",
+  "locale": "merged_uk_eu4_target_country",
+  "goal": "Score TikTok Shop PDP purchase trust from the viewpoint of the local TikTok Shop buyer indicated by target_country across UK, DE, FR, ES, IT.",
   "exchange_rate_baseline": {
     "source": "Frankfurter API",
     "date": "2026-08-14",
@@ -17,86 +17,60 @@
       "buyer_persona": "British TikTok Shop shopper",
       "primary_language": "English",
       "tolerated_languages": [
-        "English",
-        "German",
-        "French",
-        "Spanish",
-        "Italian",
-        "Dutch",
-        "Polish",
-        "Swedish",
-        "other European languages"
+        "English"
       ],
       "target_currency": "GBP",
-      "language_tolerance": "English is the clearest target-market language. Other European languages are not negative by themselves, but page_quality should go down when a UK buyer cannot understand core specs, safety, warranty, return, plug/voltage, compatibility, expiry, or digital redemption restrictions.",
-      "value_judgment": "Judge value from the UK buyer perspective using localized GBP landed cost converted from USD. Consider shipping share, return/warranty clarity, UK plug/voltage compatibility, and whether price makes sense only after trust is credible."
+      "price_input_semantics": "For merged vNext, UK sales_price and shipping_fee are native GBP inputs with no conversion applied; list_price_usd remains a USD anchor. Use localized_price_context and price_input_semantics rather than a blanket USD conversion.",
+      "strict_language_rule": "Strict UK localization: core PDP info in non-target primary language without target-language translation means page_quality <= 3. Core purchase info includes product identity, quantity/count, material, ingredients, size/fit/specs, safety, warranty, return, delivery, region, expiry, and redemption restrictions.",
+      "language_tolerance": "Only brand names, model names, international measurement units, and non-critical decorative text may remain outside English without penalty. Core purchase info must be available in English or page_quality <= 3.",
+      "value_judgment": "Judge value from the UK buyer perspective using native GBP landed cost. Consider shipping share, return/warranty clarity, UK plug/voltage compatibility, and whether price makes sense only after trust is credible."
     },
     "DE": {
       "buyer_persona": "German TikTok Shop shopper",
       "primary_language": "German",
       "tolerated_languages": [
-        "German",
-        "English",
-        "French",
-        "Spanish",
-        "Italian",
-        "Dutch",
-        "Polish",
-        "other European languages"
+        "German"
       ],
       "target_currency": "EUR",
-      "language_tolerance": "German is the clearest target-market language. Other European languages are not negative by themselves, but page_quality should go down when a German buyer cannot understand core specs, safety, warranty, return, plug/voltage, compatibility, expiry, or digital redemption restrictions.",
+      "price_input_semantics": "For merged vNext, DE sales_price and shipping_fee are USD inputs converted to native EUR; list_price_usd remains a USD anchor. Use localized_price_context and price_input_semantics rather than a blanket native-price assumption.",
+      "strict_language_rule": "Strict DE localization: core PDP info in non-target primary language without target-language translation means page_quality <= 3. Core purchase info includes product identity, quantity/count, material, ingredients, size/fit/specs, safety, warranty, return, delivery, region, expiry, and redemption restrictions.",
+      "language_tolerance": "Only brand names, model names, international measurement units, and non-critical decorative text may remain outside German without penalty. Core purchase info must be available in German or page_quality <= 3.",
       "value_judgment": "Judge value from the German buyer perspective using localized EUR landed cost converted from USD. Consider shipping share, return/warranty clarity, EU plug/voltage compatibility, and whether price makes sense only after trust is credible."
     },
     "FR": {
       "buyer_persona": "French TikTok Shop shopper",
       "primary_language": "French",
       "tolerated_languages": [
-        "French",
-        "English",
-        "German",
-        "Spanish",
-        "Italian",
-        "Dutch",
-        "Polish",
-        "other European languages"
+        "French"
       ],
       "target_currency": "EUR",
-      "language_tolerance": "French is the clearest target-market language. Other European languages are not negative by themselves, but page_quality should go down when a French buyer cannot understand core specs, safety, warranty, return, plug/voltage, compatibility, expiry, or digital redemption restrictions.",
+      "price_input_semantics": "For merged vNext, FR sales_price and shipping_fee are USD inputs converted to native EUR; list_price_usd remains a USD anchor. Use localized_price_context and price_input_semantics rather than a blanket native-price assumption.",
+      "strict_language_rule": "Strict FR localization: core PDP info in non-target primary language without target-language translation means page_quality <= 3. Core purchase info includes product identity, quantity/count, material, ingredients, size/fit/specs, safety, warranty, return, delivery, region, expiry, and redemption restrictions.",
+      "language_tolerance": "Only brand names, model names, international measurement units, and non-critical decorative text may remain outside French without penalty. Core purchase info must be available in French or page_quality <= 3.",
       "value_judgment": "Judge value from the French buyer perspective using localized EUR landed cost converted from USD. Consider shipping share, return/warranty clarity, EU plug/voltage compatibility, and whether price makes sense only after trust is credible."
     },
     "ES": {
       "buyer_persona": "Spanish TikTok Shop shopper",
       "primary_language": "Spanish",
       "tolerated_languages": [
-        "Spanish",
-        "English",
-        "German",
-        "French",
-        "Italian",
-        "Dutch",
-        "Polish",
-        "other European languages"
+        "Spanish"
       ],
       "target_currency": "EUR",
-      "language_tolerance": "Spanish is the clearest target-market language. Other European languages are not negative by themselves, but page_quality should go down when a Spanish buyer cannot understand core specs, safety, warranty, return, plug/voltage, compatibility, expiry, or digital redemption restrictions.",
+      "price_input_semantics": "For merged vNext, ES sales_price and shipping_fee are USD inputs converted to native EUR; list_price_usd remains a USD anchor. Use localized_price_context and price_input_semantics rather than a blanket native-price assumption.",
+      "strict_language_rule": "Strict ES localization: core PDP info in non-target primary language without target-language translation means page_quality <= 3. Core purchase info includes product identity, quantity/count, material, ingredients, size/fit/specs, safety, warranty, return, delivery, region, expiry, and redemption restrictions.",
+      "language_tolerance": "Only brand names, model names, international measurement units, and non-critical decorative text may remain outside Spanish without penalty. Core purchase info must be available in Spanish or page_quality <= 3.",
       "value_judgment": "Judge value from the Spanish buyer perspective using localized EUR landed cost converted from USD. Consider shipping share, return/warranty clarity, EU plug/voltage compatibility, and whether price makes sense only after trust is credible."
     },
     "IT": {
       "buyer_persona": "Italian TikTok Shop shopper",
       "primary_language": "Italian",
       "tolerated_languages": [
-        "Italian",
-        "English",
-        "German",
-        "French",
-        "Spanish",
-        "Dutch",
-        "Polish",
-        "other European languages"
+        "Italian"
       ],
       "target_currency": "EUR",
-      "language_tolerance": "Italian is the clearest target-market language. Other European languages are not negative by themselves, but page_quality should go down when an Italian buyer cannot understand core specs, safety, warranty, return, plug/voltage, compatibility, expiry, or digital redemption restrictions.",
+      "price_input_semantics": "For merged vNext, IT sales_price and shipping_fee are USD inputs converted to native EUR; list_price_usd remains a USD anchor. Use localized_price_context and price_input_semantics rather than a blanket native-price assumption.",
+      "strict_language_rule": "Strict IT localization: core PDP info in non-target primary language without target-language translation means page_quality <= 3. Core purchase info includes product identity, quantity/count, material, ingredients, size/fit/specs, safety, warranty, return, delivery, region, expiry, and redemption restrictions.",
+      "language_tolerance": "Only brand names, model names, international measurement units, and non-critical decorative text may remain outside Italian without penalty. Core purchase info must be available in Italian or page_quality <= 3.",
       "value_judgment": "Judge value from the Italian buyer perspective using localized EUR landed cost converted from USD. Consider shipping share, return/warranty clarity, EU plug/voltage compatibility, and whether price makes sense only after trust is credible."
     }
   },
@@ -174,7 +148,48 @@
       "applies_to": [
         "all"
       ],
-      "text": "Use the target_country locale profile. EU cross-border PDPs may use English, German, French, Spanish, Italian, Dutch, Polish, Swedish, and other European languages. Non-local language is not a negative signal by itself. Penalize language only when the target-country buyer cannot understand core information, when mixed languages obscure core information, or when the PDP fails to disclose key specs, safety instructions, warranty, return, region, plug/voltage, compatibility, expiry, or digital redemption restrictions in a way the target-country buyer can reasonably use. Detail images with readable claims or specs count as PDP presentation evidence even when product_desc text is sparse."
+      "text": "Use the target_country locale profile and its primary_language as the controlling PDP language rule. Core PDP info in non-target primary language without target-language translation means page_quality <= 3. Core information includes product identity, quantity/count, material, ingredients, size/fit/specs, safety instructions, warranty, return, delivery, region, plug/voltage, compatibility, expiry, and digital redemption restrictions. Detail images with readable target-language claims or specs count as PDP presentation evidence even when product_desc text is sparse."
+    },
+    {
+      "id": "LOCALIZE-01",
+      "name": "Strict target-country language cap",
+      "category": "localization",
+      "applies_to": [
+        "all",
+        "target_country",
+        "title",
+        "product_main_images",
+        "size_chart_images",
+        "product_desc",
+        "page_quality",
+        "product_attributes_text",
+        "image_manifest"
+      ],
+      "text": "Strict target-country language cap: title, product_main_images, size_chart_images, product_desc, and product_attributes_text must make core PDP info available in the target-country primary language or with equivalent target-language translation. Core PDP info in non-target primary language without target-language translation means page_quality <= 3. Non-target text is tolerated only for brand names, model names, international measurement units, and non-critical decorative text. Core facts include product identity, quantity/count, material, ingredients, size/fit/specs, safety, warranty, return, delivery, region, expiry, and redemption restrictions."
+    },
+    {
+      "id": "LOCALIZE-02",
+      "name": "Long-image description localization",
+      "category": "localization",
+      "applies_to": [
+        "all",
+        "product_main_images",
+        "long_images",
+        "product_desc",
+        "visual_evidence_context"
+      ],
+      "text": "Long-image description localization: product_main_images and long-image descriptions are PDP evidence when legible. If product_desc empty acceptance is needed because the long-image descriptions carry the actual product specs, use those visual descriptions instead of treating the page as empty. However, non-localized long-image core purchase text without equivalent target-language translation means page_quality <= 3."
+    },
+    {
+      "id": "LOCALIZE-03",
+      "name": "Size chart localization",
+      "category": "localization",
+      "applies_to": [
+        "all",
+        "size_chart_images",
+        "page_quality"
+      ],
+      "text": "Size chart localization: when size_chart_images are present, check whether size labels, body measurements, units, fit guidance, age/height/weight ranges, and SKU mapping are understandable in the target-country primary language or have equivalent target-language translation. Non-localized size_chart_images that block size selection mean page_quality <= 3."
     },
     {
       "id": "LEVEL-01",
@@ -535,6 +550,33 @@
       "text": "When review evidence is sparse, a few objective quality, fulfillment, missing-part, leaking, wrong-item, core-function, or safety complaints carry more weight than they would in a large stable review base. Sparse evidence plus objective product or fulfillment problems usually caps the final score at 3 unless strong official/channel/page evidence clearly shows the issue is isolated and low impact."
     },
     {
+      "id": "NEW-01",
+      "name": "New-product review and quality reliability",
+      "category": "review_logic",
+      "applies_to": [
+        "all",
+        "is_new_product_30d",
+        "new_product_context",
+        "quality",
+        "reviews"
+      ],
+      "text": "Use is_new_product_30d and new_product_context to calibrate sparse evidence. If is_new_product_30d=true and cl_pay_sub_order_cnt < 10, do not mechanically lower quality because product sales/reviews are sparse; reduce product review history weight and use shop_sales/shop_fans/shop_final_score/page/attributes/images more heavily. no historical sales/reviews with neutral evidence can default quality to 4, not mechanically 3, when page, attributes, product_main_images, size_chart_images, safety, compliance, and price context are clean enough. New-product tolerance does not override safety, compliance, Stage 1 red flags, IPR/authorization risk, misleading/wrong-item evidence, visible product/spec conflict, or negative review_contents. Score 3 is not a harmless neutral value; it means cautious but buyable and must be justified by enough visible trust evidence."
+    },
+    {
+      "id": "NEW-02",
+      "name": "Traffic-tier social proof reminder",
+      "category": "review_logic",
+      "applies_to": [
+        "all",
+        "shop_sales",
+        "shop_fans",
+        "shop_final_score",
+        "cl_pay_sub_order_cnt",
+        "new_product_context"
+      ],
+      "text": "Use shop_sales/shop_fans/shop_final_score/page/attributes/images plus cl_pay_sub_order_cnt as traffic-tier context, not hidden backend proof of product quality. For is_new_product_30d=true and cl_pay_sub_order_cnt < 10, reduce product review history weight rather than mechanically lowering quality because product sales/reviews are sparse. High shop traffic or shop_final_score can reduce uncertainty only when PDP evidence and review_contents are consistent. no historical sales/reviews with neutral evidence can default quality to 4, not mechanically 3, but traffic-tier or new-product tolerance does not override safety, compliance, Stage 1 red flags, IPR/authorization risk, misleading/wrong-item evidence, visible product/spec conflict, or negative review_contents."
+    },
+    {
       "id": "VALUE-01",
       "name": "Landed price",
       "category": "value",
@@ -542,7 +584,7 @@
         "price",
         "shipping"
       ],
-      "text": "Use localized landed cost equal product price plus shipping fee after converting USD input prices into the target_country currency. UK uses GBP; DE, FR, ES, and IT use EUR. Cheap cannot rescue fake, unsafe, scam, wrong-item, invalid code, or severe quality failure. High price can be trusted if brand/channel/quality support it; white-label high price needs evidence. Shipping pain depends on item size, weight, price share, local buyer expectations, and whether it destroys the apparent deal. Converted prices support coarse value judgment and are not exact local market-price proof."
+      "text": "Use localized landed cost from price_input_semantics and localized_price_context. UK sales_price and shipping_fee are native GBP and are not converted; DE, FR, ES, and IT sales_price and shipping_fee are USD inputs converted to EUR; list_price_usd is an anchor only. Cheap cannot rescue fake, unsafe, scam, wrong-item, invalid code, or severe quality failure. High price can be trusted if brand/channel/quality support it; white-label high price needs evidence. Shipping pain depends on item size, weight, price share, local buyer expectations, and whether it destroys the apparent deal. Converted EU4 prices support coarse value judgment and are not exact local market-price proof."
     },
     {
       "id": "VALUE-02",

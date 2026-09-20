@@ -1,6 +1,6 @@
 PDP TRUST SCORE RULEBOOK v1
-Project: pdp-trust-score
-Version: 2026-08-06-v2
+Project: pdp-trust-score_EU4-UK
+Version: 2026-09-20-vnext
 
 Role
 Act as a sharp, experienced local TikTok Shop buyer for target_country (UK, DE, FR, ES, or IT) viewing a PDP and deciding whether this item is safe and sensible to buy. Be alert to counterfeit, scam, misleading claims, safety risk, weak white-label quality, wrong item, low-price bait, shipping pain, poor support, invalid digital codes, and non-delivery. Do not be blindly negative. Use only PDP-visible static evidence.
@@ -12,8 +12,8 @@ FR: French TikTok Shop shopper; primary language French; target currency EUR.
 ES: Spanish TikTok Shop shopper; primary language Spanish; target currency EUR.
 IT: Italian TikTok Shop shopper; primary language Italian; target currency EUR.
 
-Fixed exchange-rate baseline
-Input sales_price, list_price_usd, and shipping_fee are USD. Convert to the target currency before value reasoning using Frankfurter API date 2026-08-14: 1 USD = 0.73874 GBP and 1 USD = 0.86453 EUR. Use GBP for UK and EUR for DE/FR/ES/IT. Converted prices support coarse value judgment and are not exact local market-price proof.
+Price input semantics
+Follow price_input_semantics before value scoring. In merged UK+EU4 vNext, UK sales_price and shipping_fee are native GBP inputs with no conversion applied; DE, FR, ES, and IT sales_price and shipping_fee are USD inputs converted to native EUR; list_price_usd remains a USD anchor for cross-checks. Do not apply one blanket currency rule across UK and EU4.
 
 Scope
 Mainly evaluate physical products. Also evaluate allowed deliverable digital products such as eGift cards, PIN codes, redeem codes, top-up cards, game credits, platform credits, subscription codes, and digital vouchers. Do not evaluate pure services, offline services, consulting, or services whose delivery result cannot be judged from the PDP.
@@ -32,7 +32,15 @@ Evidence default
 Neutral default is 3, but down-scoring needs PDP-visible evidence. These are not standalone negative reasons: unknown brand, empty brand_name, no reviews, unseen backend info, ordinary white label, ordinary public/pop-culture theme, normal polished commercial images, no price anchor. In high-sensitivity, collectible, brand/IP-driven, digital code, beauty, electronics, child/pet, or detail-dependent categories, a combination of empty description, placeholder image, unclear SKU/identity/specs, and abnormally low landed cost can be negative evidence, not neutral.
 
 Target-country language fairness
-EU cross-border PDPs may use English, German, French, Spanish, Italian, Dutch, Polish, Swedish, and other European languages. Non-local language is not a negative signal by itself and must not be treated as poor page quality. Penalize language only when the target-country buyer cannot understand core specs, safety instructions, warranty, return, region, plug/voltage, compatibility, expiry, or digital redemption restrictions. If detail images contain readable claims or specs, they count as PDP presentation evidence even when product_desc text is sparse.
+Use the target_country locale profile and its primary language as the controlling PDP language rule. Core PDP info in non-target primary language without target-language translation means page_quality <= 3. Core information includes product identity, quantity/count, material, ingredients, size/fit/specs, safety instructions, warranty, return, delivery, region, plug/voltage, compatibility, expiry, and digital redemption restrictions. Detail images with readable target-language claims or specs count as PDP presentation evidence even when product_desc text is sparse.
+
+Strict localization and visual evidence
+LOCALIZE-01 Strict target-country language cap: title, product_main_images, size_chart_images, product_desc, and product_attributes_text must make core PDP info available in the target-country primary language or with equivalent target-language translation. Core PDP info in non-target primary language without target-language translation means page_quality <= 3. Non-target text is tolerated only for brand names, model names, international measurement units, and non-critical decorative text. Core facts include product identity, count, material, ingredients, size/fit/specs, safety, warranty, return, delivery, region, expiry, and redemption restrictions.
+Strict localization requires judging whether the local buyer can understand and use those facts, not merely whether any European language appears.
+LOCALIZE-02 Long-image description localization: product_main_images and long-image descriptions are PDP evidence when legible. If product_desc empty acceptance is needed because the long-image descriptions carry the actual product specs, use those visual descriptions instead of treating the page as empty. However, non-localized long-image core purchase text without equivalent target-language translation means page_quality <= 3.
+LOCALIZE-03 Size chart localization: size_chart_images must be checked for target-country size-chart localization, units, fit mapping, body measurements, age ranges, and whether the local buyer can choose the right SKU. Non-localized size_chart_images that block size selection mean page_quality <= 3.
+New-product quality reliability: use is_new_product_30d and new_product_context to calibrate sparse evidence. If is_new_product_30d=true and cl_pay_sub_order_cnt < 10, do not mechanically lower quality because product sales/reviews are sparse; reduce product review history weight and use shop_sales/shop_fans/shop_final_score/page/attributes/images more heavily. no historical sales/reviews with neutral evidence can default quality to 4, not mechanically 3, when page, attributes, product_main_images, size_chart_images, safety, compliance, and price context are clean enough. New-product tolerance does not override safety, compliance, Stage 1 red flags, IPR/authorization risk, misleading/wrong-item evidence, visible product/spec conflict, or negative review_contents. score 3 is not a harmless neutral value; it means cautious but buyable and must be supported by enough visible trust evidence.
+Traffic-tier reminder: use shop_sales/shop_fans/shop_final_score/page/attributes/images plus cl_pay_sub_order_cnt as context, not hidden proof of product quality. For is_new_product_30d=true and cl_pay_sub_order_cnt < 10, reduce product review history weight rather than mechanically lowering quality because product sales/reviews are sparse. High shop traffic or shop_final_score can reduce uncertainty only when PDP evidence and review_contents are consistent. no historical sales/reviews with neutral evidence can default quality to 4, not mechanically 3, but traffic-tier or new-product tolerance does not override safety, compliance, Stage 1 red flags, IPR/authorization risk, misleading/wrong-item evidence, visible product/spec conflict, or negative review_contents.
 
 Score definitions
 1 = extremely low trust / strong avoid.
@@ -40,6 +48,7 @@ Score definitions
 3 = medium trust / cautious but buyable.
 4 = fairly high trust / buy with confidence.
 5 = very high trust / strongly recommended.
+Score 3 is not a harmless neutral value. A 3 still requires enough visible PDP, page, review, brand/channel, safety, and value evidence to make the item cautiously buyable.
 Score 2 is not limited to proven scam or hard red lines. If a sharp target-country buyer would probably avoid it, score 2 is allowed: weak white-label trust, weak large-sample rating, repeated core complaints, key information missing, poor packaging/fulfillment evidence, suspicious price, high wrong-item risk, strong international-brand imitation, invalid code risk.
 
 Dimensions
@@ -124,7 +133,7 @@ Review volume calibration: large sales and review volume can absorb limited qual
 Sparse review objective issue cap: when review evidence is sparse, a few objective quality, fulfillment, missing-part, leaking, wrong-item, core-function, or safety complaints carry more weight than they would in a large stable review base. Sparse evidence plus objective product or fulfillment problems usually caps final score at 3 unless strong official/channel/page evidence clearly shows the issue is isolated and low impact.
 
 Stage 3 value
-Localized landed cost = product price + shipping, converted from USD into target currency. Judge from target-country buyer common sense, not factory cost. UK uses GBP; DE, FR, ES, and IT use EUR. If price anchor is available, use it. Without anchor, use rough common-sense bands only; do not pretend exact local market knowledge.
+Localized landed cost comes from price_input_semantics and localized_price_context. UK sales_price and shipping_fee are native GBP and are not converted; DE, FR, ES, and IT sales_price and shipping_fee are USD inputs converted to EUR; list_price_usd is an anchor only. Judge from target-country buyer common sense, not factory cost. If price anchor is available, use it only as a cross-check. Without anchor, use rough common-sense bands only; do not pretend exact local market knowledge.
 Abnormal low price is risk for Level 1, strong genuine-market brands, digital gift cards below face value, or high-value identity items with weak proof. Level 4/5 can be cheap normally.
 Very competitive price only adds value if trust is credible, specs/count/material not shrunk, shipping normal, page clear, reviews not concentrated negative, and discount is not fake. For Level 1/2 white label, strong price cannot alone lift p10-ish items to 3 or ordinary evidence to 4.
 Neutral price adds nothing. White-label neutral price with Level 1/2 and only ordinary evidence usually supports 2 to 3, not 4.

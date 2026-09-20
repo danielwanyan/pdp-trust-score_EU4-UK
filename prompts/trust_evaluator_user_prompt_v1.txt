@@ -22,8 +22,13 @@ target_country: {{target_country}}
 target_currency: {{target_currency}}
 locale_context: {{locale_context}}
 images: {{images}}
+product_main_images: {{product_main_images}}
+size_chart_images: {{size_chart_images}}
+image_manifest: {{image_manifest}}
+visual_evidence_context: {{visual_evidence_context}}
 product_desc: {{product_desc}}
-Image order: images[0] is the RPC product main image. images[1+] are detail images extracted from product_desc. If product_desc text is empty but images[1+] contain readable PDP claims or specification text, do not treat the page as having no description evidence; use the detail images as PDP presentation evidence.
+Image sources: product_main_images are RPC product main-image URLs. size_chart_images are extracted size-chart URLs. images is the combined visual list for model viewing; use image_manifest and visual_evidence_context to understand source separation. If product_desc is empty but product_main_images, size_chart_images, or long-image descriptions contain readable PDP claims or specification text, do not treat the page as having no description evidence; use those visual sources as PDP presentation evidence.
+主图/product_main_images、尺码图/size_chart_images、长图/detail images 都是 PDP 可见证据。必须读取其中可见的标题、包装文字、数量、容量、尺寸、尺码表、材料、成分、警告、说明、适配、地区或兑换限制。若核心购买信息没有 target-country primary language 翻译，page_quality <= 3。
 
 质量与评分
 is_main_img_firstimg_quality: {{is_main_img_firstimg_quality}}
@@ -34,11 +39,13 @@ list_price_usd: {{list_price_usd}}
 sales_price: {{sales_price}}
 currency: {{currency}}
 localized_price_context: {{localized_price_context}}
+price_input_semantics: {{price_input_semantics}}
 
 商品属性
 brand_name: {{brand_name}}
 first_category_name: {{first_category_name}}
 sku_cnt: {{sku_cnt}}
+product_attributes_text: {{product_attributes_text}}
 
 店铺基础信息
 shop_name: {{shop_name}}
@@ -50,6 +57,7 @@ shop_info: {{shop_info}}
 
 商品互动与社交证明
 comment_cnt_td: {{comment_cnt_td}}
+review_cnt_td: {{review_cnt_td}}
 avg_review_star_td: {{avg_review_star_td}}
 avg_star_rating: {{avg_star_rating}}
 review_contents: {{review_contents}}
@@ -58,11 +66,14 @@ with_image_comment_ratio: {{with_image_comment_ratio}}
 comment_summary_text: {{comment_summary_text}}
 comment_30d_emotion: {{comment_30d_emotion}}
 review_context: {{review_context}}
+is_new_product_30d: {{is_new_product_30d}}
+new_product_context: {{new_product_context}}
 
 review_contents 是商品最近 10 条评论文本，属于质量可靠性的直接证据。必须阅读其中的具体问题点，不要只看平均分。
 avg_star_rating 是商品最近 10 条评论星级的平均值。它反映最近满意度和稳定性，但只用于解释近期评论窗口和负向校准，不是新的输出维度，也不能单独重复加权。
 核心规则不变：avg_review_star_td 是主评分锚点；avg_star_rating 如果更低，可以在 review_contents 支持真实问题时进一步降档；如果更高，不做提档。
 如果 review_contents 缺失，说明缺失即可，不得把缺失本身作为扣分理由。
+新品/is_new_product_30d 不是自动扣分理由，但如果 new_product_context 显示 cl_pay_sub_order_cnt < 10 且没有具体 review_contents，质量可靠性仍未被充分验证。新品容忍不能覆盖 safety、compliance、Stage 1 red flags、IPR/authorization risk、misleading/wrong-item evidence、visible product/spec conflict 或 negative review_contents。3 分不是普通中性分，而是谨慎可买；必须说明为什么可见证据足以支撑 3 分或为什么需要降到 2 分。
 
 物流信息
 is_free_shipping_fee: {{is_free_shipping_fee}}
@@ -102,8 +113,8 @@ decision_checklist: {{decision_checklist}}
 10. 5 分资格检查：必须说明 avg_review_star_td 和 avg_star_rating 是否都达到 4.6 以上，review_contents 是否没有明显客观差评，并确认没有安全、IPR/授权、核心 claim conflict、履约不稳或质量问题。若只是主观偏好、颜色、口味、尺码期待或孤立物流问题，不要单独阻止 5 分。
 11. 官方/品牌背书边界：说明官方店、品牌官旗、平台官方标识或强品牌渠道证据抵消了哪些正品/交付风险，并说明哪些风险不能被抵消，例如 IPR、unsupported official claim、核心规格冲突、安全风险、重复核心质量问题或明显 misleading。
 12. Safety consistency check：如果商品属于儿童使用、带电/电池/加热、眼部接触、可食用/补剂、身体接触类，且 PDP 或评论提到安全相关故障，safety must not remain 5，除非你明确说明该证据与商品无关、属于孤立误用或不构成当前商品风险。若 PDP 或评论证据显示 clear bodily harm to the user，且来自可避免的产品故障，例如烧伤、烫伤、触电、过热、化学品泄漏、不安全涂抹器、结构失败、眼部伤害、麦粒肿或类似直接身体损害，final score must not exceed 3；集中伤害投诉可以支持 2 分。
-13. Visible image/text consistency check：必须对比 product_name/title 与主图/包装/详情图可读文字中的数量、容量、尺寸、件数、free shipping、buy one get one、included items、核心规格。若冲突，page_quality 必须降档；影响收到什么或核心规格时 authenticity_delivery 也要降档。
-14. 价值调整：只在 trust credible 后考虑性价比。sales_price/list_price_usd/shipping_fee 是 USD 输入，必须使用 localized_price_context 中按 target_country 转换后的 GBP 或 EUR 到手价。UK 使用 GBP；DE/FR/ES/IT 使用 EUR。value=5 requires 强 trust、强页面、健康评论，且没有未解决的安全、履约、图文不一致、核心 claim-review conflict 或近期评分下滑。
+13. Visible image/text consistency check：必须对比 product_name/title 与主图/包装/详情图/长图可读文字中的数量、容量、尺寸、尺码图、件数、free shipping、buy one get one、included items、核心规格。若冲突，page_quality 必须降档；影响收到什么或核心规格时 authenticity_delivery 也要降档。
+14. 价值调整：只在 trust credible 后考虑性价比。必须按 price_input_semantics 理解 sales_price/list_price_usd/shipping_fee，不要默认 sales_price 或 shipping_fee 一定是 USD；必须使用 localized_price_context 中按 target_country 得到的 GBP 或 EUR 到手价。UK 使用 GBP；DE/FR/ES/IT 使用 EUR。value=5 requires 强 trust、强页面、健康评论，且没有未解决的安全、履约、图文不一致、核心 claim-review conflict 或近期评分下滑。
 15. 3/4 boundary check：说明商品到底是 4 分“比较放心买”，还是 3 分“谨慎可买”。如果核心标题/图片/详情卖点与评论冲突、儿童安全、食品包装、身体接触伤害、双评分偏低、核心规格不一致、sales_price=0 数据污染、拍卖/竞价格式、近期评分下滑出现，说明它们如何影响 1/2、3、4/5 三档边界。对使用者身体有明显损害风险时，不能给 4 分或 5 分；必须说明为什么 final score must not exceed 3。
 16. 最终结论：说明为什么这个 PDP 第一眼信任总分是该 score，并确认没有做六项算术平均。
 
