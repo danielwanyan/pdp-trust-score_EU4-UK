@@ -1279,11 +1279,7 @@ Append to `build_decision_checklist`:
 
 - [ ] **Step 5: Update system prompt**
 
-In `prompts/trust_evaluator_system_prompt_v1.txt`, replace the old language paragraph:
-
-```text
-Target-country PDPs may contain multiple European languages. Non-local language is not a negative signal by itself. Penalize language only when it blocks the target-country buyer from understanding core specs, safety, warranty, return, compatibility, region, expiry, or redemption information. Use locale_context for the primary language and tolerated-language expectations.
-```
+In `prompts/trust_evaluator_system_prompt_v1.txt`, replace the old broad multilingual-tolerance paragraph that treated non-local European languages as acceptable for core PDP information.
 
 with:
 
