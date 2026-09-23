@@ -113,7 +113,7 @@ def test_required_files_exist():
 def test_structured_rules_schema():
     data = json.loads((ROOT / "rules/pdp_trust_rules_structured_v1.json").read_text())
     assert data["project"] == "pdp-trust-score_EU4-UK"
-    assert data["version"] == "2026-09-20-vnext"
+    assert data["version"] == "2026-09-23-official-tag-fix"
     assert data["locale"] == "merged_uk_eu4_target_country"
     assert "UK, DE, FR, ES, IT" in data["goal"]
     assert set(data["locale_profiles"]) == SUPPORTED_TARGET_COUNTRIES
@@ -535,7 +535,7 @@ def test_trust_evaluator_prompts_include_k_column_calibration_rules():
     user_text = (ROOT / "prompts/trust_evaluator_user_prompt_v1.txt").read_text()
     combined = system_text + "\n" + user_text
     assert "IPR authorization ladder" in system_text
-    assert "unsupported official" in system_text
+    assert "unsupported official" in system_text.lower()
     assert "4.6" in combined
     assert "Score 5" in combined
     assert "Sparse review evidence" in system_text
@@ -1512,6 +1512,38 @@ def test_rules_brain_does_not_route_official_own_brand_to_ipr_ladder():
     assert "IPR-01" in unsupported_official_ipr["matched_rules"]
     assert "IPR-02" in unsupported_official_ipr["matched_rules"]
     assert "unsupported_official_claim_signal" in unsupported_official_ipr["risk_hints"]
+
+
+def test_platform_official_tag_prevents_unsupported_authenticity_penalty():
+    namespace = load_code_node("code_nodes/rules_brain_pdp_trust_v1.py")
+    rules = json.loads((ROOT / "rules/pdp_trust_rules_structured_v1.json").read_text())
+
+    official_fragrance = namespace["build_output"](
+        {
+            "rules_json": rules,
+            "product_id": "1729427201035702036",
+            "product_name": "Nyla EDP Perfume Arabiyat Prestige by My Perfumes 80ml Authentic 100% Genuine",
+            "brand_name": "My Perfumes",
+            "first_category_name": "Beauty & Personal Care",
+            "shop_name": "SALSABEEL Fragrances",
+            "is_official_tag": "1",
+            "product_desc": "The exclusive authorized distributor for Arabiyat Prestige fragrances.",
+            "sales_price": "34.15725",
+            "shipping_fee": "0",
+            "avg_review_star_td": "4.584878",
+            "avg_star_rating": "4.2",
+            "review_cnt_td": "37663",
+            "review_contents": "[\"Smells amazing\", \"Smells gorgeous but does not last long\"]",
+        }
+    )
+
+    routing_tags = official_fragrance["pdp_debug_summary"].split("routing_tags: ", 1)[1]
+    assert "unsupported_official_claim" not in routing_tags
+    assert "clear_ipr_with_weak_authorization" not in routing_tags
+    assert "IPR-02" not in official_fragrance["matched_rules"]
+    assert "unsupported_official_claim_signal" not in official_fragrance["risk_hints"]
+    assert "platform_official_tag_protection_check" in official_fragrance["risk_hints"]
+    assert "do not request separate authorization proof" in official_fragrance["risk_hints"]
 
 
 def test_final_data_cleaning_recursively_finds_aicolate_rpc_output_shape():

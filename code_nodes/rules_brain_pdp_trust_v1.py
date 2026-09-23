@@ -20,7 +20,7 @@ ALLOWED_B_END_REASONS = [
 def minimal_fallback_rules():
     return {
         "project": "pdp-trust-score_EU4-UK",
-        "version": "2026-09-20-vnext-fallback",
+        "version": "2026-09-23-official-tag-fix-fallback",
         "locale": "merged_uk_eu4_target_country",
         "exchange_rate_baseline": {
             "source": "Frankfurter API",
@@ -136,13 +136,13 @@ def minimal_fallback_rules():
             {
                 "id": "IPR-01",
                 "category": "red_flag",
-                "text": "Use a three-step IPR authorization ladder: clear IPR without credible official authorization usually scores 2; suspected IPR without abnormal price or strong impersonation usually scores 3; score above 3 requires credible official store, brand flagship, platform official tag, authorization, authentication, or equivalent proof.",
+                "text": "Use a three-step IPR authorization ladder: clear IPR without credible official authorization usually scores 2; suspected IPR without abnormal price or strong impersonation usually scores 3; score above 3 requires credible official store, brand flagship, platform official tag, authorization, authentication, or equivalent proof. is_official_tag=1 is sufficient official-channel evidence; do not request separate authorization proof or trigger counterfeit, authorization-deficiency, or unsupported-official-claim penalties without explicit contradictory evidence.",
                 "applies_to": ["ipr_authorization_ladder", "ipr", "ip", "licensed", "official", "authentic", "brand"],
             },
             {
                 "id": "IPR-02",
                 "category": "red_flag",
-                "text": "Unsupported official, licensed, authentic, genuine, or authorized claims are not proof by themselves. If channel evidence does not support the claim, cap at 3 by default and downgrade to 2 when abnormal price, strong visual imitation, weak white-label evidence, or strong official impersonation is also present.",
+                "text": "Unsupported official, licensed, authentic, genuine, or authorized claims are not proof by themselves only when channel evidence is absent. is_official_tag=1 is sufficient official-channel evidence, so those claims are channel-supported and must not trigger this rule without explicit contradictory evidence. Otherwise cap at 3 by default and downgrade to 2 when abnormal price, strong visual imitation, weak white-label evidence, or strong official impersonation is also present.",
                 "applies_to": ["unsupported_official_claim", "official", "licensed", "authentic", "genuine", "authorized"],
             },
             {
@@ -160,7 +160,7 @@ def minimal_fallback_rules():
             {
                 "id": "BRAND-02",
                 "category": "arbitration",
-                "text": "Official store, brand flagship, platform official tag, and strong brand-channel evidence protect authenticity and delivery confidence, but do not override clear IPR risk, unsupported official claims, hard PDP claim conflicts, safety concerns, repeated core quality failures, or strong misleading evidence.",
+                "text": "is_official_tag=1 means the shop is an official flagship store and is sufficient official-channel evidence. Treat official, authentic, genuine, licensed, and authorized claims as channel-supported; do not request separate authorization proof or apply counterfeit, authorization-deficiency, or unsupported-official-claim penalties unless explicit contradictory evidence exists. Official backing does not override hard PDP claim conflicts, safety concerns, repeated core quality failures, fulfillment failures, or strong misleading evidence unrelated to authenticity.",
                 "applies_to": ["official_backing_protection_boundary", "official", "brand", "authorized", "channel"],
             },
             {
@@ -371,6 +371,7 @@ def collect_pdp(params):
         "category": text_param(params, "first_category_name", "product_category", "category", "Product_category"),
         "brand_name": text_param(params, "brand_name", "brand", "Product_brand"),
         "seller_name": text_param(params, "shop_name", "seller_name", "store_name"),
+        "is_official_tag": text_param(params, "is_official_tag"),
         "platform_badges": text_param(params, "is_official_tag", "has_flash_sale", "is_free_shipping_fee"),
         "price": price,
         "list_price_usd": text_param(params, "list_price_usd", "list_price", "original_price"),
@@ -799,6 +800,8 @@ def detect_visible_image_text_consistency_issue(pdp):
 
 
 def has_official_channel_evidence(pdp):
+    if parse_bool_flag(pdp.get("is_official_tag")) is True:
+        return True
     badge = (pdp.get("platform_badges") or "").lower()
     seller = (pdp.get("seller_name") or "").lower()
     brand = (pdp.get("brand_name") or "").lower()
@@ -1169,8 +1172,10 @@ def infer_risk_hints(pdp, tags):
         add_check("body_contact_category_check", "body-contact or efficacy beauty goods need safety and review-content checking; this reminder is not evidence that harm exists")
     if pdp.get("brand_name") or has_official_channel_evidence(pdp):
         add_check("ipr_authorization_ladder_check", "if IP, logo, official identity, or brand authenticity is core to the transaction, check authorization ladder; this reminder is not proof of IPR risk")
+    if parse_bool_flag(pdp.get("is_official_tag")) is True:
+        add_check("platform_official_tag_protection_check", "is_official_tag=1 is sufficient official-channel evidence and means the shop is an official flagship store; treat official/authentic/genuine/licensed/authorized wording as supported, do not request separate authorization proof, and do not trigger counterfeit, authorization-deficiency, or unsupported-official-claim penalties without explicit contradictory evidence")
     if detect_official_backing_protection_boundary(pdp):
-        add_check("official_backing_boundary_check", "official or brand backing can protect authenticity/delivery confidence, but cannot override hard evidence of IPR, unsupported claims, safety, repeated quality failure, or misleading conflict")
+        add_check("official_backing_boundary_check", "official or brand backing protects authenticity/delivery confidence; an official-tagged shop does not need separate authorization proof, while hard PDP conflicts, safety, repeated quality failure, fulfillment failure, or strong misleading evidence remain independently scoreable")
     if any(term in text for term in ("official", "authentic", "genuine", "authorized", "licensed", "1:1", "replica", "same as original")):
         if detect_unsupported_official_claim(pdp):
             add_trigger("unsupported_official_claim_signal", "official/licensed/authentic/genuine/authorized wording appears without matching shop/channel proof; cap at 3 by default and downgrade only with abnormal price, strong imitation, weak white-label evidence, or strong impersonation", "unsupported_official_claim_attention")
@@ -1226,7 +1231,7 @@ def infer_risk_hints(pdp, tags):
     if "hard_claim_spec_conflict" in tags:
         add_trigger("hard_claim_spec_conflict_signal", "clear core-claim or core-information conflict can override positive social proof; cap at 3, and consider 2 if the conflict affects what the buyer receives or sensitive safety/food/body-contact trust", "hard_claim_spec_conflict_attention")
     if "official_backing_protection_boundary" in tags:
-        add_check("official_backing_protection_boundary_check", "official or brand backing protects authenticity and delivery confidence, but cannot override clear IPR risk, unsupported official claims, hard claim conflicts, safety concerns, repeated core quality failures, or strong misleading evidence")
+        add_check("official_backing_protection_boundary_check", "is_official_tag=1 is sufficient official-channel evidence; do not request separate authorization proof or apply counterfeit, authorization-deficiency, or unsupported-official-claim penalties without explicit contradictory evidence, while hard claim conflicts, safety concerns, repeated core quality failures, fulfillment failures, and strong misleading evidence remain independently scoreable")
     if not pdp.get("description") and not pdp.get("specs"):
         add_trigger("page_gap_signal", "description/specs appear missing; this matters more for high-sensitivity, digital, collectible, beauty, electronics, child/pet, or detail-dependent goods", "page_gap_attention")
     add_check("b_end_reason_guard", "output b_end_reasons only if score <4 and cause is clear; max 3 exact strings")
@@ -1286,6 +1291,8 @@ def build_rules_context(rules, pdp, selected_rules, tags, warning):
     lines.append("Machine JSON must only contain authenticity_delivery, safety, quality, value, compliance, page_quality, score, and optional b_end_reasons.")
     lines.append("Use locale_context for target-country role, strict primary-language rule, and localized GBP/EUR value reasoning.")
     lines.append("Apply target-country strict language rule: core PDP info in non-target primary language without target-language translation means page_quality <= 3; only brand names, model names, international measurement units, and non-critical decorative text may remain outside the primary language without penalty.")
+    if parse_bool_flag(pdp.get("is_official_tag")) is True:
+        lines.append("High-priority official-channel rule: is_official_tag=1 means official flagship store and is sufficient official-channel evidence. Treat official/authentic/genuine/licensed/authorized claims as supported; do not request separate authorization proof or trigger counterfeit, authorization-deficiency, or unsupported-official-claim penalties without explicit contradictory evidence.")
     if warning:
         lines.append(f"rules_warning: {warning}")
     lines.append("")

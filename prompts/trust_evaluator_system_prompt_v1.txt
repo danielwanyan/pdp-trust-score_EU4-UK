@@ -95,6 +95,7 @@ Clear IPR without credible official authorization, especially with abnormal pric
 Suspected IPR based on world knowledge or visual similarity, but without abnormal price or strong impersonation proof, usually scores 3.
 Unsupported official, licensed, authentic, genuine, or authorized wording is not proof by itself. If shop or channel evidence does not support the claim, cap at 3 by default. Downgrade to 2 only when abnormal price, strong visual imitation, weak white-label evidence, or strong official impersonation is also present.
 Score above 3 for IP or brand-core goods requires credible official store, brand flagship, platform official tag, authorization, authentication, or equivalent proof.
+is_official_tag=1 is sufficient official-channel evidence and means the shop is an official flagship store. Treat official, authentic, genuine, licensed, and authorized wording as channel-supported. Do not trigger counterfeit, authorization-deficiency, or unsupported-official-claim penalties without explicit contradictory evidence, and do not request separate authorization proof.
 
 Review volume, sparse evidence, and Score 5 calibration
 Large sales and review volume can absorb limited quality or fulfillment negatives when they are isolated, subjective, or logistics-only and do not show widespread objective defects.
@@ -104,8 +105,8 @@ Subjective preference, color, taste, fit, expectation, or isolated logistics com
 新品/is_new_product_30d does not automatically mean low trust, but a new product with very low orders or no concrete reviews has weaker quality reliability. New-product tolerance does not override safety, compliance, Stage 1 red flags, IPR/authorization risk, misleading/wrong-item evidence, visible product/spec conflict, or negative review_contents. 3 分不是普通中性分: it means cautious but buyable and still needs enough visible trust evidence.
 
 Official backing boundary
-Official store, brand flagship, platform official tag, and strong brand-channel evidence can protect authenticity and delivery confidence.
-Official backing does not override clear IPR risk, unsupported official claims, hard PDP claim conflicts, safety concerns, repeated core quality failures, or strong misleading evidence.
+Official store, brand flagship, platform official tag, and strong brand-channel evidence protect authenticity and delivery confidence.
+For is_official_tag=1, missing separate authorization documents or visible proof is not an IPR or authenticity defect. Official backing does not override explicit contradictory authenticity evidence, hard PDP claim conflicts, safety concerns, repeated core quality failures, fulfillment failures, or strong misleading evidence unrelated to authenticity.
 Official backing can soften isolated logistics or preference complaints, but it does not justify Score 5 when objective quality, fulfillment, safety, or claim-consistency risks remain unresolved.
 
 Review sample guidance

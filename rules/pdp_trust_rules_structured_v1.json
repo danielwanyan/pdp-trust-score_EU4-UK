@@ -1,6 +1,6 @@
 {
   "project": "pdp-trust-score_EU4-UK",
-  "version": "2026-09-20-vnext",
+  "version": "2026-09-23-official-tag-fix",
   "locale": "merged_uk_eu4_target_country",
   "goal": "Score TikTok Shop PDP purchase trust from the viewpoint of the local TikTok Shop buyer indicated by target_country across UK, DE, FR, ES, IT.",
   "exchange_rate_baseline": {
@@ -368,7 +368,7 @@
         "authentic",
         "brand"
       ],
-      "text": "For products where an IP, brand, character, team badge, logo, or official identity is core to the transaction, use a three-step authorization ladder. Clear IPR risk without credible official authorization, especially with abnormal price, white-label evidence, weak seller proof, or strong imitation, usually scores 2. Suspected IPR found from world knowledge or visual similarity, but without abnormal price or strong impersonation proof, usually scores 3. A score above 3 requires credible official store, brand flagship, platform official tag, authorization, authentication, or equivalent proof."
+      "text": "For products where an IP, brand, character, team badge, logo, or official identity is core to the transaction, use a three-step authorization ladder. Clear IPR risk without credible official authorization, especially with abnormal price, white-label evidence, weak seller proof, or strong imitation, usually scores 2. Suspected IPR found from world knowledge or visual similarity, but without abnormal price or strong impersonation proof, usually scores 3. A score above 3 requires credible official store, brand flagship, platform official tag, authorization, authentication, or equivalent proof. is_official_tag=1 is sufficient official-channel evidence and means the shop is an official flagship store. Do not trigger counterfeit, authorization-deficiency, or unsupported-official-claim penalties without explicit contradictory evidence, and do not request separate authorization proof."
     },
     {
       "id": "IPR-02",
@@ -382,7 +382,7 @@
         "genuine",
         "authorized"
       ],
-      "text": "If the PDP claims official, licensed, authentic, genuine, or authorized identity but the shop, brand field, platform official tag, or visible proof does not support that claim, do not treat the claim as positive evidence. Cap the score at 3 by default as suspected IPR or unsupported authenticity. Downgrade to 2 when abnormal price, strong visual imitation, weak white-label evidence, or strong official impersonation is also present."
+      "text": "If the PDP claims official, licensed, authentic, genuine, or authorized identity but the shop, brand field, platform official tag, or visible proof does not support that claim, do not treat the claim as positive evidence. is_official_tag=1 is sufficient official-channel evidence, so these claims are channel-supported and this rule must not trigger without explicit contradictory evidence. When channel evidence is absent, cap the score at 3 by default as suspected IPR or unsupported authenticity. Downgrade to 2 when abnormal price, strong visual imitation, weak white-label evidence, or strong official impersonation is also present."
     },
     {
       "id": "RULECAP-01",
@@ -404,7 +404,7 @@
         "authorized",
         "channel"
       ],
-      "text": "Official store, brand flagship, platform official tag, and strong brand-channel evidence can protect authenticity and delivery confidence. They do not override clear IPR risk, unsupported official claims, hard PDP claim conflicts, safety concerns, repeated core quality failures, or strong misleading evidence. Official backing can soften isolated logistics or preference complaints, but it does not justify score 5 when objective quality, fulfillment, safety, or claim-consistency risks remain unresolved."
+      "text": "is_official_tag=1 means the shop is an official flagship store and is sufficient official-channel evidence. Treat official, authentic, genuine, licensed, and authorized claims as channel-supported; do not request separate authorization proof or apply counterfeit, authorization-deficiency, or unsupported-official-claim penalties unless explicit contradictory evidence exists. Official backing does not override hard PDP claim conflicts, safety concerns, repeated core quality failures, fulfillment failures, or strong misleading evidence unrelated to authenticity, and it does not justify score 5 when those risks remain unresolved."
     },
     {
       "id": "SPECIAL-01",
